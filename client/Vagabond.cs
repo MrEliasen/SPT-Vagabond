@@ -81,6 +81,7 @@ public class Vagabond : BaseUnityPlugin
         new BlockTraderMailClaimAllPatch().Enable();
         new BlockTraderMailClaimGetPatch().Enable();
         new TransitInteractionPatch().Enable();
+        new TransitCommitPatch().Enable();
         new SkipInsuranceFlowPatch().Enable();
         UIMessageService.Create(transform);
 

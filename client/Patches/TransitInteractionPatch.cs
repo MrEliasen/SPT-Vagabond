@@ -2,9 +2,13 @@
 using System.Linq;
 using System.Reflection;
 using EFT;
+using EFT.Communications;
 using EFT.InventoryLogic;
 using HarmonyLib;
 using SPT.Reflection.Patching;
+using UnityEngine;
+using Vagabond.Client.Services;
+using Vagabond.Common.Data;
 using Vagabond.Common.Definitions;
 
 namespace Vagabond.Client.Patches;
@@ -91,6 +95,35 @@ internal class TransitInteractionPatch : ModulePatch
 
                     break;
                 }
+
+                case CustomExfilRequirementType.Cost:
+                {
+                    var currencyId = string.IsNullOrWhiteSpace(req.Id) ? Currencies.Ruble : req.Id;
+                    var price = req.Count;
+                    if (req.ApplyDiscount)
+                    {
+                        player.HasMarkOfUnknown(out var moU);
+                        price = Mathf.Max(1, player.Profile.GetExfiltrationPrice(req.Count, moU));
+                    }
+
+                    var qualifyingStack = player.Profile.Inventory.GetAllItemByTemplate(currencyId)
+                        .FirstOrDefault(it => it.StackObjectsCount >= price);
+                    if (qualifyingStack == null)
+                    {
+                        c++;
+                        if (failReason == string.Empty)
+                        {
+                            failReason = "Insufficient funds:";
+                        }
+
+                        var tip = string.IsNullOrWhiteSpace(req.RequirementTip)
+                            ? $"need a single stack of {price} {CurrencyShortName(currencyId)}"
+                            : $"{req.RequirementTip} ({price})";
+                        failReason += $"{(c > 0 ? " & " : " ")}{tip}";
+                    }
+
+                    break;
+                }
             }
         }
 
@@ -100,5 +133,64 @@ internal class TransitInteractionPatch : ModulePatch
         }
 
         return true;
+    }
+
+    internal static string CurrencyShortName(string id)
+    {
+        if (id == Currencies.Ruble) return "₽";
+        if (id == Currencies.Dollar) return "$";
+        if (id == Currencies.Euro) return "€";
+        return id;
+    }
+}
+
+// fires after the 2s "plant" succeeds and before the equipment screen.
+internal class TransitCommitPatch : ModulePatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return AccessTools.FirstMethod(
+            typeof(TransitInteractionControllerAbstractClass.Class1179),
+            m => m.Name == "method_0");
+    }
+
+    [PatchPostfix]
+    private static void Postfix(TransitInteractionControllerAbstractClass.Class1179 __instance, bool successful)
+    {
+        if (!successful)
+        {
+            return;
+        }
+
+        if (!CustomExfilPlacementPatch.CustomTransitDefinitions.TryGetValue(__instance.pointId, out var def))
+        {
+            return;
+        }
+
+        foreach (var req in def.Requirements)
+        {
+            if (req.Type != CustomExfilRequirementType.Cost)
+            {
+                continue;
+            }
+
+            var id = string.IsNullOrWhiteSpace(req.Id) ? Currencies.Ruble : req.Id;
+            var price = req.Count;
+            if (req.ApplyDiscount)
+            {
+                __instance.player.HasMarkOfUnknown(out var moU);
+                price = Mathf.Max(1, __instance.player.Profile.GetExfiltrationPrice(req.Count, moU));
+            }
+
+            if (!TransitCostService.TryDeductCost(__instance.player, id, price, out var err))
+            {
+                NotificationManagerClass.DisplayWarningNotification($"Transit aborted: {err}");
+                __instance.TransitInteractionControllerAbstractClass.method_18(__instance.player);
+                return;
+            }
+
+            NotificationManagerClass.DisplayMessageNotification(
+                $"Paid {price} {TransitInteractionPatch.CurrencyShortName(id)}");
+        }
     }
 }

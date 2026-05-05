@@ -7,4 +7,5 @@ public class CustomExtractRequirementDefinition
     public int Count { get; set; } = 1;
     public string RequiredSlot { get; set; } = "";
     public string RequirementTip { get; set; } = "";
+    public bool ApplyDiscount { get; set; } = false;
 }
