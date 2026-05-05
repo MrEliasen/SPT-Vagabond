@@ -4,6 +4,7 @@ using SPTarkov.Server.Core.Models.Enums;
 using Vagabond.Common;
 using Vagabond.Common.Data;
 using Vagabond.Common.Definitions;
+using Vagabond.Common.Enums;
 
 namespace Vagabond.Server.Services;
 

@@ -41,6 +41,31 @@ internal static class ExfilService
         };
     }
 
+    // GroundZero fix
+    private static IEnumerable<(Location location, string mapName)> RaidLocationToSptLocations(
+        DatabaseService databaseService, RaidLocation raid)
+    {
+        var locations = databaseService.GetLocations();
+        switch (raid)
+        {
+            case RaidLocation.Customs: yield return (locations.Bigmap, "bigmap"); break;
+            case RaidLocation.FactoryDay: yield return (locations.Factory4Day, "factory4_day"); break;
+            case RaidLocation.FactoryNight: yield return (locations.Factory4Night, "factory4_night"); break;
+            case RaidLocation.GroundZero:
+                yield return (locations.SandboxHigh, "Sandbox_high");
+                yield return (locations.Sandbox, "Sandbox");
+                break;
+            case RaidLocation.Interchange: yield return (locations.Interchange, "Interchange"); break;
+            case RaidLocation.Lighthouse: yield return (locations.Lighthouse, "Lighthouse"); break;
+            case RaidLocation.Reserve: yield return (locations.RezervBase, "RezervBase"); break;
+            case RaidLocation.Shoreline: yield return (locations.Shoreline, "Shoreline"); break;
+            case RaidLocation.Streets: yield return (locations.TarkovStreets, "TarkovStreets"); break;
+            case RaidLocation.Woods: yield return (locations.Woods, "Woods"); break;
+            case RaidLocation.Labs: yield return (locations.Laboratory, "laboratory"); break;
+            case RaidLocation.Labyrinth: yield return (locations.Labyrinth, "labyrinth"); break;
+        }
+    }
+
     public static void RemoveHideout(HideoutState? state)
     {
         if (string.IsNullOrEmpty(state?.Id))
@@ -127,20 +152,17 @@ internal static class ExfilService
 
         foreach (var (raid, entry) in ExfilsConfig.Maps)
         {
-            var location = RaidLocationToLocation(databaseService, raid);
-            if (location == null)
+            var sptLocs = RaidLocationToSptLocations(databaseService, raid).ToList();
+            if (sptLocs.Count == 0)
             {
                 continue;
             }
 
-            if (!VagabondLocations.InverseLookupTable.TryGetValue(raid, out var maps) || maps.Count == 0)
-            {
-                continue;
-            }
-
-            var mapName = maps.First();
             var offset = raidToOffset.GetValueOrDefault(raid, 12000);
-            AddExtractions(offset, location, raid, mapName, entry.Extracts, entry.Transits);
+            foreach (var (location, mapName) in sptLocs)
+            {
+                AddExtractions(offset, location, raid, mapName, entry.Extracts, entry.Transits);
+            }
         }
     }
 

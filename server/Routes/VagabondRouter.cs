@@ -81,7 +81,7 @@ public class VagabondRouter(
         response.AllowPostRaidHealing = VagabondConfig.Config.AllowPostRaidHealing;
         response.ResetOnDeath = VagabondConfig.Config.ResetOnDeath;
         response.WipeFirstRaid = VagabondConfig.Config.WipeStashOnFirstRaidEntry;
-        response.CurrentMap = VagabondService.GetCurrentRaidId(state);
+        response.CurrentMap = VagabondService.GetCurrentRaidId(sessionId, state);
         response.NewCharacter = string.IsNullOrEmpty(state.CurrentMap);
         response.LimitTraderMailAccess = VagabondConfig.Config.LimitTraderMailAccess;
         response.RaidFirItems = state.RaidFirItems ?? new HashSet<string>();
@@ -143,7 +143,7 @@ public class VagabondRouter(
 
         var mapName = !string.IsNullOrWhiteSpace(payload.LocationId)
             ? payload.LocationId
-            : VagabondService.GetCurrentRaidId(state);
+            : VagabondService.GetCurrentRaidId(sessionId, state);
 
         if (state.HideoutState == null)
         {

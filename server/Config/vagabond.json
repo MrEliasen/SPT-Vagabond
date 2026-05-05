@@ -29,7 +29,7 @@
   // acceptable raid names are:
   //  FactoryDay,
   //  FactoryNight,
-  //  GroundZero,
+  //  GroundZero, (applies to both low and high variants; level decides which one is used)
   //  Streets,
   //  Woods,
   //  Customs,
@@ -46,7 +46,7 @@
   // acceptable raid names are:
   //  FactoryDay,
   //  FactoryNight,
-  //  GroundZero,
+  //  GroundZero, (level decides low vs high; ForceGroundZeroHigh forces high)
   //  Streets,
   //  Woods,
   //  Customs,
@@ -97,5 +97,8 @@
   // 1.0 = 100%
   // 0.25 = 25%
   // 0.0 = game default.
-  "HealthOnDeath": 0.0
+  "HealthOnDeath": 0.0,
+  // if enabled, all players (regardless of level) are routed to sandbox_high (the harder Ground Zero variant).
+  // Otherwise, it will use the vanilla level gate to determine which GZ variant you will be routes to.
+  "ForceGroundZeroHigh": false
 }

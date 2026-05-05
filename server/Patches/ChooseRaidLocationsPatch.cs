@@ -100,6 +100,18 @@ public sealed class ChooseRaidLocationsPatch : AbstractPatch
             }
         }
 
+        // GroundZero patch
+        if (currentMap == RaidLocation.GroundZero || transitMap == RaidLocation.GroundZero)
+        {
+            var lvl = pmc.CharacterData.PmcData.Info?.Level ?? 1;
+            var picked = VagabondService.GetGroundZeroMapIdForLevel(lvl);
+
+            allowedMapIds.RemoveWhere(x =>
+                (string.Equals(x, "Sandbox", StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(x, "Sandbox_high", StringComparison.OrdinalIgnoreCase))
+                && !string.Equals(x, picked, StringComparison.OrdinalIgnoreCase));
+        }
+
         if (allowedMapIds.Count == 0)
         {
             return jsonString;

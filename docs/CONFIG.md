@@ -14,7 +14,7 @@ Configs live in `SPT/user/mods/Vagabond/config/`. Restart the SPT server after e
 
 ## Raid names
 
-`FactoryDay`, `FactoryNight`, `G[KEYBINDINGS.md](KEYBINDINGS.md)roundZero`, `Streets`, `Woods`, `Customs`, `Interchange`, `Lighthouse`, `Reserve`, `Shoreline`, `Labs`, `Labyrinth`. Day/Night are separate raids.
+`FactoryDay`, `FactoryNight`, `GroundZero`, `Streets`, `Woods`, `Customs`, `Interchange`, `Lighthouse`, `Reserve`, `Shoreline`, `Labs`, `Labyrinth`. Day/Night are separate raids.
 
 ---
 

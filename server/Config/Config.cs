@@ -40,6 +40,7 @@ public sealed class VagabondConfig
     public double ConsecutiveMapLootReductionRate { get; set; } = 0.5;
     public double ConsecutiveMapLootReductionMin { get; set; } = 0.05;
     public double HealthOnDeath { get; set; }
+    public bool ForceGroundZeroHigh { get; set; }
 
     // internal
     public static VagabondConfig Config = new();

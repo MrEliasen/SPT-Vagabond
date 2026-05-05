@@ -165,7 +165,6 @@ public class GameChanges(DatabaseService databaseService) : IOnLoad
     public Task OnLoad()
     {
         var locationsdb = databaseService.GetLocations();
-        locationsdb.Sandbox.Base.RequiredPlayerLevelMax = 0;
         locationsdb.SandboxHigh.Base.Enabled = true;
 
         Globals globals = databaseService.GetGlobals();

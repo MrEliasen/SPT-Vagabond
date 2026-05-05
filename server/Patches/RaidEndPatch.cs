@@ -42,6 +42,7 @@ public sealed class RaidEndPatch : AbstractPatch
         EndLocalRaidRequestData request, string locationName, out HashSet<string>? __state)
     {
         __state = null;
+
         if (!isDead && VagabondService.ShouldApplyVagabondRules(sessionId))
         {
             var state = StateService.GetState(sessionId);

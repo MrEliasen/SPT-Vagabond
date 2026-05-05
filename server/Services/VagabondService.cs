@@ -6,6 +6,7 @@ using SPTarkov.Server.Core.Models.Eft.Inventory;
 using SPTarkov.Server.Core.Models.Eft.Profile;
 using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Servers;
+using SPTarkov.Server.Core.Services;
 using Vagabond.Common.Data;
 using Vagabond.Server.Config;
 using Vagabond.Common.Enums;
@@ -246,7 +247,19 @@ internal static class VagabondService
         }
     }
 
-    public static string GetCurrentRaidId(VagabondSessionState state)
+    public static string GetGroundZeroMapIdForLevel(int playerLevel)
+    {
+        if (VagabondConfig.Config.ForceGroundZeroHigh)
+        {
+            return "Sandbox_high";
+        }
+
+        var db = ReflectionUtil.GetService<DatabaseService>();
+        var cap = db?.GetLocations().Sandbox?.Base?.RequiredPlayerLevelMax ?? 20;
+        return playerLevel > cap ? "Sandbox_high" : "Sandbox";
+    }
+
+    public static string GetCurrentRaidId(MongoId sessionId, VagabondSessionState state)
     {
         if (string.IsNullOrEmpty(state.CurrentMap))
         {
@@ -285,6 +298,14 @@ internal static class VagabondService
                     allowedMapIds.Add(mapId);
                 }
             }
+        }
+
+        // GroundZero fix
+        var effective = transitMap != RaidLocation.Nil ? transitMap : currentMap;
+        if (effective == RaidLocation.GroundZero)
+        {
+            var lvl = GetPmcProfile(sessionId)?.CharacterData?.PmcData?.Info?.Level ?? 1;
+            return GetGroundZeroMapIdForLevel(lvl);
         }
 
         return allowedMapIds.First();

@@ -53,6 +53,19 @@ public sealed class RaidJoinPatch : AbstractPatch
         }
 
         var mapNameE = VagabondLocations.NormaliseMapName(mapName);
+
+        // GroundZero fix
+        if (mapNameE == RaidLocation.GroundZero)
+        {
+            var lvl = pmc.CharacterData.PmcData.Info?.Level ?? 1;
+            var picked = VagabondService.GetGroundZeroMapIdForLevel(lvl);
+            if (!string.Equals(mapName, picked, StringComparison.OrdinalIgnoreCase))
+            {
+                request.Location = picked;
+                mapName = picked;
+            }
+        }
+
         if (string.IsNullOrEmpty(state.CurrentMap) && mapNameE != RaidLocation.Nil)
         {
             state.TransitState = null;
