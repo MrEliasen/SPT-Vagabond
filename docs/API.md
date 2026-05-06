@@ -74,6 +74,26 @@ Api.AddTraderLocations([
 
 ---
 
+## Hideout Traders
+
+Adds traders that should be available when the player is **inside their own hideout** (`LastExit == VGB_HO_<own id>`). Stored on the profile's Vagabond state. Has no effect at any other exfil.
+
+| Method | Description |
+| --- | --- |
+| `void AddHideoutTraders(string sessionId, List<string> traderIds)` | Add trader ids to the player's hideout-trader set. Persists immediately. |
+| `bool RemoveHideoutTraders(string sessionId, List<string> traderIds)` | Remove ids. Returns `true` if at least one id was removed. |
+| `IReadOnlyCollection<string> GetHideoutTraders(string sessionId)` | Current set of ids. Empty array if none / unknown session. |
+
+```csharp
+Api.AddHideoutTraders(sessionId, ["<trader mongo id>"]);
+// list:    Api.GetHideoutTraders(sessionId);
+// remove:  Api.RemoveHideoutTraders(sessionId, ["<trader mongo id>"]);
+```
+
+For Fence specifically there is a global config switch (`AddFenceToHideout`) that makes Fence reachable from **any** hideout — see [CONFIG.md](CONFIG.md#trader--economy). The 7 vanilla traders that ship a join-hideout quest also populate this set automatically on quest completion.
+
+---
+
 ## Session State
 
 | Method | Description |

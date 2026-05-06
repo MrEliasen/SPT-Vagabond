@@ -68,8 +68,9 @@ Custom respawn example:
 | `AdjustRaidTimeMins` | `60` | Minutes added to every raid timer. Negative shortens. |
 | `EnablePickRaidLocation` | `false` | Let player pick any map (ignores location lock). |
 | `EnableConsecutiveMapLootReduction` | `true` | Repeated raids on the same map shrink loot. Streak resets on a successful extract from a different map. Day+Night Factory share a streak. |
-| `ConsecutiveMapLootReductionRate` | `0.5` | Multiplier per repeat. `0.5` → 100 / 50 / 25 / ... |
-| `ConsecutiveMapLootReductionMin` | `0.05` | Floor (5 %). |
+| `ConsecutiveMapLootRetentionRate` | `0.5` | Multiplier per repeat. `0.5` → 100 / 50 / 25 / ... |
+| `ConsecutiveMapLootRetentionMin` | `0.05` | Floor (5 %). |
+| `ForceGroundZeroHigh` | `false` | If `true`, route every player (regardless of level) to `Sandbox_high` instead of using the vanilla level gate. |
 
 ### Hideout
 

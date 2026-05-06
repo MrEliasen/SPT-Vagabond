@@ -32,10 +32,10 @@ Source: [common/Definitions/CustomExfil.cs](../common/Definitions/CustomExfil.cs
 | `DestinationLocation` | `string` | EFT scene id of destination, e.g. `bigmap`. Use `VagabondLocations.RaidLocationToMapName(...)`. |
 | `AccessKeysSourceLocation` | `string` | Override which map's `AccessKeys` gate this transit. Empty = use `DestinationLocation` (vanilla). |
 | `Description` | `string` | Shown by transit interaction UI. |
-| `EntryPoints` | `string` | Comma-separated EFT entry point names. Extracts only. |
+| `EntryPoints` | `string` | Comma-separated EFT entry point names. **Ignored on extracts** — the server overwrites with the map's PMC entry points before sync. Not used by transits. See [EXFILS.md](EXFILS.md#shared-fields). |
 | `Side` | `string` | `"Pmc"` (default), or as needed. |
 | `ExfiltrationTime` | `float` | Timer in seconds. Default `20f`. |
-| `ActivateAfterSeconds` | `int` | Default `60`. |
+| `ActivateAfterSeconds` | `int` | Default `0`. Delay before the exfil activates. |
 | `IsActive` | `bool` | Default `true`. |
 | `Events` | `bool` | |
 | `HideIfNoKey` | `bool` | Hide transit if access key not on player. |
@@ -55,11 +55,12 @@ Source: [common/Definitions/CustomExfilRequirement.cs](../common/Definitions/Cus
 | `Count` | `int` (default `1`) |
 | `RequiredSlot` | `string` |
 | `RequirementTip` | `string` |
+| `ApplyDiscount` | `bool` (default `false`) — see [`Cost` notes in EXFILS.md](EXFILS.md#cost-notes). Transit-only; ignored on extracts (vanilla v-ex pipeline always discounts). |
 
 ### `CustomExfilRequirementType`
 Source: [common/Definitions/CustomExfilRequirementType.cs](../common/Definitions/CustomExfilRequirementType.cs)
 
-`None = 0, HasItem = 1, EmptySlot = 2`
+`None = 0, HasItem = 1, EmptySlot = 2, Cost = 3`
 
 ### `TraderLocation`
 Source: [common/Definitions/TraderLocation.cs](../common/Definitions/TraderLocation.cs)
@@ -87,6 +88,8 @@ Source: [common/Definitions/VagabondSessionState.cs](../common/Definitions/Vagab
 | `ResetProfile` | `bool` |
 | `CanPlaceHideout` | `bool` |
 | `HideoutTraders` | `HashSet<string>` |
+| `LastExtractMap` | `string` |
+| `ConsecutiveExtractsSameMap` | `int` |
 
 ### `TransitState`
 `FromMap`, `ToMap`, `ExitName` — all `string?`.
@@ -104,7 +107,7 @@ Wire shapes used by Vagabond's internal routes. Listed for reference — mods no
 | --- | --- |
 | `GetExfilDataRequest` | `Version: int` |
 | `SyncExfilResponse` | `Version: int`, `CustomExfils: Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>?` |
-| `SyncStateResponse` | `ResetOnDeath, WipeFirstRaid, NewCharacter, AllowPostRaidHealing, LimitTraderMailAccess: bool`, `CurrentMap: string`, `QuestExfils: Dictionary<string, List<string>>`, `CustomExfils: Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>`, `RaidFirItems: HashSet<string>` |
+| `SyncStateResponse` | `ResetOnDeath, WipeFirstRaid, NewCharacter, AllowPostRaidHealing, LimitTraderMailAccess, LootStreakEnabled: bool`, `CurrentMap: string`, `QuestExfils: Dictionary<string, List<string>>`, `CustomExfils: Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>`, `RaidFirItems: HashSet<string>`, `LootStreakMultiplier: double` (default `1.0`), `LootStreakCount: int` |
 | `PlaceHideoutRequest` | `X, Y, Z, R: float`, `LocationId: string?` |
 | `PlaceHideoutResponse` | `Success: bool`, `Message: string`, `CurrentRaid: string?`, `MapName: string?` |
 | `ManualSpawnPoint` | `X, Y, Z, Rotation: double` |

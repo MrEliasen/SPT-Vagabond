@@ -160,7 +160,7 @@ internal static class HideoutService
     /// </summary>
     internal static void AddHideoutTraders(string sessionId, List<string> traderIds)
     {
-        if (string.IsNullOrWhiteSpace(sessionId) ||traderIds.Count == 0)
+        if (string.IsNullOrWhiteSpace(sessionId) || traderIds.Count == 0)
         {
             return;
         }
