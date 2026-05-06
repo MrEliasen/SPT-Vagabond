@@ -93,8 +93,8 @@
   //  0.5 = keep 50% loot per raid. After 2 raids, the loot spanws are reduced to: 25% (0.5 ^ 2 = 0.25)
   //  0.1 = keep 10% loot per raid. After 2 raids, the loot spanws are reduced to: 1% (0.1 ^ 2 = 0.01)
   "ConsecutiveMapLootRetentionRate": 0.5,
-  // the minimum amount of loot regardless of streak. 0.05 = 5% of the normal amount of loot.
-  "ConsecutiveMapLootReductionMin": 0.05,
+  // the minimum amount of loot spawn regardless of streak. 0.05 = 5% of the default/normal amount of loot.
+  "ConsecutiveMapLootRetentionMin": 0.05,
   // if enabled, your limbs are healed to this amount when you die.
   // Examples:
   // 1.0 = 100%
