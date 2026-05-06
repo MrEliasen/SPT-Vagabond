@@ -40,8 +40,8 @@ public static class LootStreakService
             return 1.0;
         }
 
-        return Math.Max(VagabondConfig.Config.ConsecutiveMapLootReductionMin,
-            Math.Pow(VagabondConfig.Config.ConsecutiveMapLootReductionRate, state.ConsecutiveExtractsSameMap));
+        return Math.Max(VagabondConfig.Config.ConsecutiveMapLootRetentionMin,
+            Math.Pow(VagabondConfig.Config.ConsecutiveMapLootRetentionRate, state.ConsecutiveExtractsSameMap));
     }
 
     public static void HandleSuccessfulExtract(VagabondSessionState state, string location)
