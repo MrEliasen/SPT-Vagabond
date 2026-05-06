@@ -14,7 +14,7 @@ You start with limited money to buy a simple loadout from Fence, with some meds 
 Since 0.6.0 custom traders are no longer 'officially' added to vagabond. They are fully supported if you add them yourself via the config or the mod authors add an integration. But there will be no custom traders exfils added directly in vagabond. To add traders to existing exfils is quite easy [via the configs](docs/TRADERS.md)
 
 #### ABPS Compatibility
-0.6.1 was tested with ABPS 2.0.16, and a graceful failover is added if the patch could not be applied. ABPS is going through what looks like a rewrite so expect incompatibility.
+0.7.0 was tested with ABPS 2.0.18, and a graceful failover is added if the patch could not be applied. ABPS is going through what looks like a rewrite so expect incompatibility.
 
 #### Using SVM?
 Disable the Raid Settings tab completely, it even being enabled is enough to cause conflicts, regardless of whether or not you changed anything within the tab. - Thank you [_liquidrage](https://forge.sp-tarkov.com/user/90917/liquidrage)!
@@ -53,6 +53,30 @@ Configs live in `SPT/user/mods/Vagabond/config/`. Restart the SPT server after e
 - [docs/TRANSITIONS.md](docs/TRANSITIONS.md) - vanilla SPT transit landing spots
 - [docs/TRADERS.md](docs/TRADERS.md) - which extract unlocks which trader
 - [docs/KEYBINDINGS.md](docs/KEYBINDINGS.md) - modder dump hotkeys (F8/F9/F10) for authoring exfils/transits
+
+## FAQ
+
+### Configs Questions
+
+- [How do I add a custom trader?](docs/FAQ.md#add-a-custom-trader)
+- [How do I add a trader to my hideout?](docs/FAQ.md#add-a-trader-to-my-hideout)
+- [How do I add a custom trader exfil?](docs/FAQ.md#add-a-custom-trader-exfil)
+- [How do I add a transit?](docs/FAQ.md#add-a-transit)
+- [How do I add item requirements to a transit/exfil?](docs/FAQ.md#add-item-requirements-to-a-transitexfil)
+- [How do I add a currency cost (v-ex style) to exfils/transits?](docs/FAQ.md#add-a-currency-cost-v-ex-style-to-exfilstransits)
+
+### Modding API Questions
+
+- [How do I integrate my custom trader with Vagabond?](docs/FAQ.md#integrate-my-custom-trader-with-vagabond)
+- [How do I add a custom exfil for my trader?](docs/FAQ.md#add-a-custom-exfil-for-my-trader)
+- [How do I make my trader available in the player's hideout?](docs/FAQ.md#make-my-trader-available-in-the-players-hideout)
+- [How do I add custom transits with requirements and cost?](docs/FAQ.md#add-custom-transits-with-requirements-and-cost)
+- [How do I change a player's Vagabond state?](docs/FAQ.md#change-a-players-vagabond-state)
+
+### Troubleshooting
+
+- [My custom extract is not appearing - why?](docs/FAQ.md#my-custom-extract-is-not-appearing--why)
+- [Cost requirement says insufficient funds, but I have the money](docs/FAQ.md#cost-requirement-says-insufficient-funds-but-i-have-the-money)
 
 ## Map
 [View Full Size](https://raw.githubusercontent.com/MrEliasen/SPT-Vagabond/refs/heads/master/screenshots/game-map.webp)    
