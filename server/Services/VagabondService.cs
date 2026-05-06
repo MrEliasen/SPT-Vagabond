@@ -255,7 +255,7 @@ internal static class VagabondService
         }
 
         var db = ReflectionUtil.GetService<DatabaseService>();
-        var cap = db?.GetLocations().Sandbox?.Base?.RequiredPlayerLevelMax ?? 20;
+        var cap = db?.GetLocations().Sandbox.Base.RequiredPlayerLevelMax ?? 20;
         return playerLevel > cap ? "Sandbox_high" : "Sandbox";
     }
 

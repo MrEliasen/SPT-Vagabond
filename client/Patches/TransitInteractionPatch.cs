@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using EFT;
-using EFT.Communications;
 using EFT.InventoryLogic;
 using HarmonyLib;
 using SPT.Reflection.Patching;
@@ -141,6 +141,115 @@ internal class TransitInteractionPatch : ModulePatch
         if (id == Currencies.Dollar) return "$";
         if (id == Currencies.Euro) return "€";
         return id;
+    }
+}
+
+// Relabel the interaction prompt, mirror v-ex's EXFIL_Transfer prompt
+internal class TransitInteractionLabelPatch : ModulePatch
+{
+    private static GamePlayerOwner _cachedOwner;
+
+    internal static void ClearCache()
+    {
+        _cachedOwner = null;
+    }
+
+    protected override MethodBase GetTargetMethod()
+    {
+        return AccessTools.Method(typeof(TransitInteractionControllerAbstractClass),
+            nameof(TransitInteractionControllerAbstractClass.method_14));
+    }
+
+    [PatchPostfix]
+    private static void Postfix(TransitInteractionControllerAbstractClass __instance, int pointId, Player player)
+    {
+        if (!CustomExfilPlacementPatch.CustomTransitDefinitions.TryGetValue(pointId, out var def))
+        {
+            return;
+        }
+
+        var actionsRef = __instance.ActionsReturnClass;
+        var actions = actionsRef?.Actions;
+        if (actions == null || actions.Count == 0)
+        {
+            return;
+        }
+
+        var label = BuildCostLabel(player, def);
+        if (string.IsNullOrEmpty(label))
+        {
+            return;
+        }
+
+        // already labelled
+        if (string.Equals(actions[0].Name, label, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        actions[0].Name = label;
+
+        var owner = ResolveOwner(player);
+        if (owner == null)
+        {
+            return;
+        }
+
+        // dont change it if it is not ours, in case it changed elsewhere
+        var bindable = owner.AvailableInteractionState;
+        if (bindable == null || !ReferenceEquals(bindable.Value, actionsRef))
+        {
+            return;
+        }
+
+        bindable.Value = null;
+        bindable.Value = actionsRef;
+    }
+
+    private static GamePlayerOwner ResolveOwner(Player player)
+    {
+        if (_cachedOwner != null)
+        {
+            return _cachedOwner;
+        }
+
+        if (player == null)
+        {
+            return null;
+        }
+
+        _cachedOwner = player.gameObject.GetComponent<GamePlayerOwner>();
+        return _cachedOwner;
+    }
+
+    private static string BuildCostLabel(Player player, CustomExfil def)
+    {
+        if (def.Requirements == null || def.Requirements.Count == 0)
+        {
+            return null;
+        }
+
+        var parts = new List<string>();
+        foreach (var req in def.Requirements)
+        {
+            if (req.Type != CustomExfilRequirementType.Cost)
+            {
+                continue;
+            }
+
+            var id = string.IsNullOrWhiteSpace(req.Id) ? Currencies.Ruble : req.Id;
+            var price = req.Count;
+            if (req.ApplyDiscount && player != null)
+            {
+                player.HasMarkOfUnknown(out var moU);
+                price = Mathf.Max(1, player.Profile.GetExfiltrationPrice(req.Count, moU));
+            }
+
+            var shortName = (id + " ShortName").Localized();
+            parts.Add(string.Format("EXFIL_Transfer".Localized(), shortName, price));
+        }
+
+        return parts.Count == 0 ? null : string.Join(", ", parts);
     }
 }
 

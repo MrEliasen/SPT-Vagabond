@@ -62,7 +62,6 @@ public sealed class RaidJoinPatch : AbstractPatch
             if (!string.Equals(mapName, picked, StringComparison.OrdinalIgnoreCase))
             {
                 request.Location = picked;
-                mapName = picked;
             }
         }
 

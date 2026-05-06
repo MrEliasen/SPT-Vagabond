@@ -445,7 +445,7 @@ internal class CustomExfilPlacementPatch : ModulePatch
             description = string.IsNullOrWhiteSpace(definition.Description)
                 ? definition.DisplayName
                 : definition.Description,
-            conditions = string.Empty,
+            conditions = BuildTransitConditionsString(definition),
             activateAfterSec = definition.ActivateAfterSeconds,
             time = (ushort)Mathf.Clamp(Mathf.RoundToInt(definition.ExfiltrationTime), 1, ushort.MaxValue),
             target = string.IsNullOrWhiteSpace(definition.AccessKeysSourceLocation)
@@ -763,6 +763,29 @@ internal class CustomExfilPlacementPatch : ModulePatch
         return TransitPointLookupField?.GetValue(controller) as Dictionary<int, TransitPoint>;
     }
 
+    private static string BuildTransitConditionsString(CustomExfil definition)
+    {
+        if (definition.Requirements == null || definition.Requirements.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var parts = new List<string>();
+        foreach (var req in definition.Requirements)
+        {
+            if (req.Type != CustomExfilRequirementType.Cost)
+            {
+                continue;
+            }
+
+            var id = string.IsNullOrWhiteSpace(req.Id) ? Currencies.Ruble : req.Id;
+            var shortName = (id + " ShortName").Localized();
+            parts.Add(string.Format("EXFIL_Transfer".Localized(), shortName, req.Count));
+        }
+
+        return parts.Count == 0 ? string.Empty : string.Join(", ", parts);
+    }
+
     private static bool IsCustomExtract(ExfiltrationPoint exfil, List<CustomExfil> definitions)
     {
         return !string.IsNullOrWhiteSpace(exfil?.Settings?.Name)
@@ -891,6 +914,7 @@ internal class CustomExfilCleanupPatch : ModulePatch
         CustomExfilPlacementPatch.ExfilPointTemplateCache.Clear();
         ExfilService.SuppressedCustomExtractPointIds.Clear();
         TransitCostService.Cleanup();
+        TransitInteractionLabelPatch.ClearCache();
         Vagabond.State.LastRaidStateSyncLocationId = string.Empty;
     }
 }

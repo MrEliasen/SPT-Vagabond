@@ -78,14 +78,12 @@ internal static class TransitCostService
         if (stack.StackObjectsCount == price)
         {
             ic.TryRunNetworkTransaction(
-                InteractionsHandlerClass.Move(stack, loc, ic, true),
-                null);
+                InteractionsHandlerClass.Move(stack, loc, ic, true));
         }
         else
         {
             ic.TryRunNetworkTransaction(
-                InteractionsHandlerClass.SplitExact(stack, price, loc, ic, ic, true),
-                null);
+                InteractionsHandlerClass.SplitExact(stack, price, loc, ic, ic, true));
         }
 
         return true;
