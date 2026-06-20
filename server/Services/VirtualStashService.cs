@@ -20,6 +20,9 @@ internal static class VirtualStashService
     private const string StashRootIdPlaceholder = "vgb_stash_root";
     private const string SortingTableRootIdPlaceholder = "vgb_sorting_root";
 
+    // Temp stash key for exits/transits that are not a hideout or a trader location.
+    private const string TempStashKey = "VGB_TEMP_STASH";
+
     private const string BlockedActionMessage =
         "This action is not possible in this stash, as it is not your hideout stash.";
 
@@ -148,6 +151,32 @@ internal static class VirtualStashService
                 Items = new List<Item>()
             });
         }
+    }
+
+    public static void ClearTempStash(MongoId sessionId)
+    {
+        var profileDataService = ReflectionUtil.GetService<ProfileDataService>();
+        if (profileDataService == null)
+        {
+            return;
+        }
+
+        var sessionLock = ActiveScopeLocks.GetOrAdd(sessionId, _ => new Lock());
+        lock (sessionLock)
+        {
+            if (ActiveStashes.TryGetValue(sessionId, out var overlayState) &&
+                string.Equals(overlayState.StashKey, TempStashKey, StringComparison.Ordinal))
+            {
+                ActiveStashes.Remove(sessionId);
+                TryRestoreStashOverlay(overlayState);
+            }
+        }
+
+        profileDataService.SaveProfileData(sessionId, GetProfileStashKey(TempStashKey), new VirtualStashData
+        {
+            StashKey = TempStashKey,
+            Items = new List<Item>()
+        });
     }
 
     public static ItemEventRouterResponse CreateBlockedActionResponse(MongoId sessionId, string? message = null)
@@ -576,6 +605,13 @@ internal static class VirtualStashService
                 stashId = state.LastExit;
                 return true;
             }
+        }
+
+        if (!string.IsNullOrWhiteSpace(state.LastExit) &&
+            state.LastExit.IndexOf(HideoutService.HideoutIdPrefix, StringComparison.OrdinalIgnoreCase) != 0)
+        {
+            stashId = TempStashKey;
+            return true;
         }
 
         return false;
