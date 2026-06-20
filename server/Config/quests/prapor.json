@@ -12,6 +12,7 @@
       "69ec04000000000000000000 declinePlayerMessage": "Not happening. Find someone else.",
       "69ec04000000000000000000 completePlayerMessage": "Here. Weapons and ammo, like you asked.",
       "69ec04000000000000000000 changeQuestMessageText": "Still not enough. A depot needs to be stocked, not decorated.",
+      "69ec043c0000000000000000": "Reach loyalty level 2",
       "69ec04780000000000000000": "Hand over ammunition",
       "69ec04b40000000000000000": "Hand over weapons",
       "69ec04f00000000000000000": "Hand over explosives"
