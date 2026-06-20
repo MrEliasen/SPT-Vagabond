@@ -62,6 +62,7 @@ public sealed class VagabondLoader : IOnLoad
         Api.SaveStateImpl = StateService.SaveState;
 
         VagabondConfig.Initialize();
+        QuestsConfig.Initialize();
         ExfilsConfig.Initialize();
         TraderLocationsConfig.Initialize();
         StaticTransitionsConfig.Initialize();

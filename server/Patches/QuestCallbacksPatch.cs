@@ -5,7 +5,7 @@ using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.ItemEvent;
 using SPTarkov.Server.Core.Models.Eft.Quests;
 using Vagabond.Common.Data;
-using Vagabond.Server.Data.Quests;
+using Vagabond.Server.Config;
 using Vagabond.Server.Services;
 
 namespace Vagabond.Server.Patches;
@@ -51,67 +51,23 @@ public sealed class QuestCallbacksCompleteQuestPatch : AbstractPatch
 
         var state = StateService.GetState(sessionID);
 
-        if (state.QuestExfils.Contains(info.QuestId))
+        var questId = info.QuestId.ToString();
+
+        if (state.QuestExfils.Contains(questId))
         {
-            state.QuestExfils.Remove(info.QuestId);
+            state.QuestExfils.Remove(questId);
         }
 
-        if (info.QuestId == HideoutRelocationQuest.QuestId)
+        if (questId == QuestsConfig.RelocationQuestId)
         {
+            state.CanPlaceHideout = true;
+
+            var pmc = VagabondService.GetPmcProfile(sessionID)?.CharacterData?.PmcData;
+            pmc?.Quests?.RemoveAll(q => q.QId == questId);
         }
-
-        switch (info.QuestId)
+        else if (QuestsConfig.HideoutTraderByQuestId.TryGetValue(questId, out var traderId))
         {
-            case HideoutRelocationQuest.QuestId:
-            {
-                state.CanPlaceHideout = true;
-
-                var pmc = VagabondService.GetPmcProfile(sessionID)?.CharacterData?.PmcData;
-                pmc?.Quests?.RemoveAll(q => q.QId == HideoutRelocationQuest.QuestId);
-                break;
-            }
-
-            case AddPraporToHideoutQuest.QuestId:
-            {
-                state.HideoutTraders.Add(AddPraporToHideoutQuest.TraderId);
-                break;
-            }
-
-            case AddRagmanToHideoutQuest.QuestId:
-            {
-                state.HideoutTraders.Add(AddRagmanToHideoutQuest.TraderId);
-                break;
-            }
-
-            case AddJaegerToHideoutQuest.QuestId:
-            {
-                state.HideoutTraders.Add(AddJaegerToHideoutQuest.TraderId);
-                break;
-            }
-
-            case AddMechanicToHideoutQuest.QuestId:
-            {
-                state.HideoutTraders.Add(AddMechanicToHideoutQuest.TraderId);
-                break;
-            }
-
-            case AddPeacekeeperToHideoutQuest.QuestId:
-            {
-                state.HideoutTraders.Add(AddPeacekeeperToHideoutQuest.TraderId);
-                break;
-            }
-
-            case AddSkierToHideoutQuest.QuestId:
-            {
-                state.HideoutTraders.Add(AddSkierToHideoutQuest.TraderId);
-                break;
-            }
-
-            case AddTherapistToHideoutQuest.QuestId:
-            {
-                state.HideoutTraders.Add(AddTherapistToHideoutQuest.TraderId);
-                break;
-            }
+            state.HideoutTraders.Add(traderId);
         }
 
         StateService.SaveState(sessionID, state);

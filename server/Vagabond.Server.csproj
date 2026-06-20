@@ -29,6 +29,7 @@
         <None Include="Config\\trader_locations.json" Link="config\\trader_locations.json" CopyToOutputDirectory="Always"/>
         <None Include="Config\\static_transitions.json" Link="config\\static_transitions.json" CopyToOutputDirectory="Always"/>
         <None Include="Config\\exfils\\*.json" Link="config\\exfils\\%(Filename)%(Extension)" CopyToOutputDirectory="Always"/>
+        <None Include="Config\\quests\\*.json" Link="config\\quests\\%(Filename)%(Extension)" CopyToOutputDirectory="Always"/>
     </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="Build">

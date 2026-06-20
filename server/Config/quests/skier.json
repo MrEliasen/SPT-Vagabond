@@ -1,0 +1,122 @@
+{
+  "effect": "joinHideout",
+  "lockedToSide": null,
+  "locales": {
+    "en": {
+      "69ecacc00000000000000000 name": "New Arrangement",
+      "69ecacc00000000000000000 description": "What, back again? Heh.. starting to think you like working for me.\n\nListen up. My usual spots are burned, too many leaks, too many idiots talking when they shouldn't. Business doesn't stop though, so I need a new place to run things from.\n\nYour hideout? Quiet, tucked away. No traffic, no questions. That's exactly what I need.\n\nBut I'm not setting up shop in an empty room. I need real capital, euros, valuables, stuff that actually moves. And a bit of intel wouldn't hurt either.. information sells just as well as anything else these days.\n\nYou bring me something worth dealing with, and I'll start running operations out of your place. Keep it clean, keep it quiet, and we both make money.\n\n** Completing this quest allows Skier to be accessible from your hideout **",
+      "69ecacc00000000000000000 startedMessageText": "Don't waste my time. Euros, valuables, intel. If I can't flip it, I don't want it.",
+      "69ecacc00000000000000000 successMessageText": "Now we're talking. This is clean, valuable.. exactly what I need.\n\nAlright, I'll move things into your hideout. Small operation, nothing flashy. The kind of place people don't ask about.\n\nYou did good. Don’t get comfortable though, I don’t keep people around unless they stay useful.",
+      "69ecacc00000000000000000 failMessageText": "What the hell is this? You expect me to run deals with this garbage?",
+      "69ecacc00000000000000000 acceptPlayerMessage": "Fine. I’ll get your stuff.",
+      "69ecacc00000000000000000 declinePlayerMessage": "Not my problem.",
+      "69ecacc00000000000000000 completePlayerMessage": "Here. Euros, valuables, and intel.",
+      "69ecacc00000000000000000 changeQuestMessageText": "Still not enough to get things moving. Bring me something worth my time.",
+      "69ecacfc0000000000000000": "Hand over euros",
+      "69ecad380000000000000000": "Hand over valuables",
+      "69ecad740000000000000000": "Hand over intel items"
+    }
+  },
+  "newQuest": {
+    "_id": "69ecacc00000000000000000",
+    "QuestName": "New Arrangement",
+    "name": "69ecacc00000000000000000 name",
+    "description": "69ecacc00000000000000000 description",
+    "note": "69ecacc00000000000000000 note",
+    "startedMessageText": "69ecacc00000000000000000 startedMessageText",
+    "successMessageText": "69ecacc00000000000000000 successMessageText",
+    "failMessageText": "69ecacc00000000000000000 failMessageText",
+    "acceptPlayerMessage": "69ecacc00000000000000000 acceptPlayerMessage",
+    "declinePlayerMessage": "69ecacc00000000000000000 declinePlayerMessage",
+    "completePlayerMessage": "69ecacc00000000000000000 completePlayerMessage",
+    "changeQuestMessageText": "69ecacc00000000000000000 changeQuestMessageText",
+    "traderId": "58330581ace78e27b8b10cee",
+    "location": "any",
+    "image": "/files/quest/icon/default.png",
+    "type": "Completion",
+    "side": "Pmc",
+    "restartable": true,
+    "canShowNotificationsInGame": true,
+    "instantComplete": false,
+    "secretQuest": false,
+    "isKey": false,
+    "templateId": "69ecacc00000000000000000",
+    "conditions": {
+      "AvailableForStart": [
+        {
+          "id": "69ecadb00000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "58330581ace78e27b8b10cee",
+          "compareMethod": ">=",
+          "value": 2
+        }
+      ],
+      "AvailableForFinish": [
+        {
+          "id": "69ecadb00000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "58330581ace78e27b8b10cee",
+          "compareMethod": ">=",
+          "value": 2
+        },
+        {
+          "id": "69ecacfc0000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 8000,
+          "onlyFoundInRaid": false,
+          "items": [
+            "569668774bdc2da2298b4568" // Euros
+          ]
+        },
+        {
+          "id": "69ecad380000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 6,
+          "onlyFoundInRaid": true,
+          "items": [
+            "59faf7ca86f7740dbe19f6c2", // Roler Submariner gold wristwatch
+            "5d235a5986f77443f6329bc6", // Gold skull ring
+            "62a09cfe4f842e1bd12da3e4", // Golden egg
+            "5734758f24597738025ee253", // Golden neck chain
+            "5bc9bc53d4351e00367fbcee", // Golden rooster figurine
+            "590de71386f774347051a052", // Antique teapot
+            "590de7e986f7741b096e5f32", // Antique vase
+            "5bc9c049d4351e44f824d360", // Battered antique book
+            "59e3639286f7741777737013", // Bronze lion figurine
+            "59e3658a86f7741776641ac4", // Cat figurine
+            "59e3647686f774176a362507", // Wooden clock
+            "5e54f62086f774219b0f1937", // Raven figurine
+            "62a091170b9d3c46de5b6cf2", // Axel parrot figurine
+            "5f745ee30acaeb0d490d8c5b"  // Veritas guitar pick
+          ]
+        },
+        {
+          "id": "69ecad740000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 4,
+          "onlyFoundInRaid": true,
+          "items": [
+            "590c645c86f77412b01304d9", // Diary
+            "5c12613b86f7743bbe2c3f76", // Intelligence folder
+            "62a0a16d0b9d3c46de5b6e97", // Military flash drive
+            "590c621186f774138d11ea29", // Secure Flash drive
+            "61bf7c024770ee6f9c6b8b53", // Secure magnetic tape cassette
+            "590c651286f7741e566b6461", // Slim diary
+            "6389c8c5dbfd5e4b95197e6b"  // TerraGroup Blue Folders materials
+          ]
+        }
+      ],
+      "Fail": []
+    },
+    "rewards": {
+      "Started": [],
+      "Fail": [],
+      "Success": []
+    }
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "effect": "joinHideout",
+  "lockedToSide": null,
+  "locales": {
+    "en": {
+      "69ebf5f00000000000000000 name": "Stocking the Clinic",
+      "69ebf5f00000000000000000 description": "Good day. I am preparing to leave my clinic, but I cannot do so under current conditions. There are still wounded, and supplies are... insufficient.\n\nBefore I can relocate, I need to ensure that what remains is properly stocked. Medicine, stimulants, basic supplies, anything that can help those who might still come through those doors.\n\nBring me what you can. Quantity matters here. Lives may depend on it.\n\n** Completing this quest allows Therapist to be accessible from your hideout **",
+      "69ebf5f00000000000000000 startedMessageText": "I do not ask this lightly. My clinic cannot be abandoned while it is still in need. Bring me medical supplies, enough to leave it in a stable condition. Only then can I consider moving.",
+      "69ebf5f00000000000000000 successMessageText": "This will do. The clinic is properly stocked now... it should sustain those who remain for some time. Thank you. I can finally make preparations to leave. You have done something meaningful here.",
+      "69ebf5f00000000000000000 failMessageText": "That is unfortunate. We cannot proceed like this.",
+      "69ebf5f00000000000000000 acceptPlayerMessage": "I understand. I'll bring what you need.",
+      "69ebf5f00000000000000000 declinePlayerMessage": "I can't help with that.",
+      "69ebf5f00000000000000000 completePlayerMessage": "Here are the supplies.",
+      "69ebf62c0000000000000000": "Hand over meds",
+      "69ebf6680000000000000000": "Hand over pain killers",
+      "69ebf6a40000000000000000": "Hand over hemostatics",
+      "69ebf6e00000000000000000": "Hand over splints",
+      "69ebf71c0000000000000000": "Hand over surgicals"
+    }
+  },
+  "newQuest": {
+    "_id": "69ebf5f00000000000000000",
+    "QuestName": "Stocking the Clinic",
+    "name": "69ebf5f00000000000000000 name",
+    "description": "69ebf5f00000000000000000 description",
+    "note": "69ebf5f00000000000000000 note",
+    "startedMessageText": "69ebf5f00000000000000000 startedMessageText",
+    "successMessageText": "69ebf5f00000000000000000 successMessageText",
+    "failMessageText": "69ebf5f00000000000000000 failMessageText",
+    "acceptPlayerMessage": "69ebf5f00000000000000000 acceptPlayerMessage",
+    "declinePlayerMessage": "69ebf5f00000000000000000 declinePlayerMessage",
+    "completePlayerMessage": "69ebf5f00000000000000000 completePlayerMessage",
+    "changeQuestMessageText": "69ebf5f00000000000000000 changeQuestMessageText",
+    "traderId": "54cb57776803fa99248b456e",
+    "location": "any",
+    "image": "/files/quest/icon/default.png",
+    "type": "Completion",
+    "side": "Pmc",
+    "restartable": true,
+    "canShowNotificationsInGame": true,
+    "instantComplete": false,
+    "secretQuest": false,
+    "isKey": false,
+    "templateId": "69ebf5f00000000000000000",
+    "conditions": {
+      "AvailableForStart": [],
+      "AvailableForFinish": [
+        {
+          "id": "69ebf7580000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "54cb57776803fa99248b456e",
+          "compareMethod": ">=",
+          "value": 2
+        },
+        {
+          "id": "69ebf62c0000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 15,
+          "onlyFoundInRaid": true,
+          "categories": [
+            "5448f39d4bdc2d0a728b4568" // MedKit
+          ]
+        },
+        {
+          "id": "69ebf6680000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 10,
+          "onlyFoundInRaid": true,
+          "categories": [
+            "5448f3a14bdc2d27728b4569" // Drugs
+          ]
+        },
+        {
+          "id": "69ebf6a40000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 10,
+          "onlyFoundInRaid": true,
+          "items": [
+            "5e8488fa988a8701445df1e4", // CALOK-B hemostatic applicator
+            "60098af40accd37ef2175f27", // CAT hemostatic tourniquet
+            "5e831507ea0a7c419c2f9bd9", // Esmarch tourniquet
+            "637b612fb7afa97bfc3d7005"  // SJ12 TGLabs combat stimulant injector
+          ]
+        },
+        {
+          "id": "69ebf6e00000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 10,
+          "onlyFoundInRaid": true,
+          "items": [
+            "544fb3364bdc2d34748b456a", // Immobilizing splint
+            "5af0454c86f7746bf20992e8"  // Aluminum splint
+          ]
+        },
+        {
+          "id": "69ebf71c0000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 5,
+          "onlyFoundInRaid": true,
+          "items": [
+            "5d02778e86f774203e7dedbe", // CMS surgical kit
+            "5d02797c86f774203f38e30a", // Surv12 field surgical kit
+            "5e99735686f7744bfc4af32c"  // Sanitar surgical kit
+          ]
+        }
+      ],
+      "Fail": []
+    },
+    "rewards": {
+      "Started": [],
+      "Fail": [],
+      "Success": []
+    }
+  }
+}

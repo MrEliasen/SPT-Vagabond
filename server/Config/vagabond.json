@@ -72,16 +72,6 @@
   "AddFenceToHideout": false,
   // if enabled, you can use another player's hideout exit to access your own hideout
   "ShareHideoutExits": false,
-  // how much it should cost to relocate the hideout
-  "HideoutRelocationFee": 350000,
-  // What loyalty level is required to accept the quest to get the trader to join your hideout?
-  "JoinHideoutTherapistLoyaltyLevel": 2,
-  "JoinHideoutJaegerLoyaltyLevel": 2,
-  "JoinHideoutMechanicLoyaltyLevel": 2,
-  "JoinHideoutPeacekeeperLoyaltyLevel": 2,
-  "JoinHideoutPraporLoyaltyLevel": 2,
-  "JoinHideoutRagmanLoyaltyLevel": 2,
-  "JoinHideoutSkierLoyaltyLevel": 2,
   // limit mail from traders so you can only access mail attachments if the trader is available where you are.
   "LimitTraderMailAccess": true,
   // if enabled, each consecutive successful extract from the same map reduces the loot the next raid into that map.

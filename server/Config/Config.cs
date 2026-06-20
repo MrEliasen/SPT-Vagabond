@@ -26,14 +26,6 @@ public sealed class VagabondConfig
     public string OnDeathGoToExfilIdentifier { get; set; } = "";
     public string StartRaid { get; set; } = "Streets";
     public string StartExfilIdentifier { get; set; } = "VGB_EXT_FENCE";
-    public int HideoutRelocationFee { get; set; } = 350_000;
-    public int JoinHideoutTherapistLoyaltyLevel { get; set; } = 2;
-    public int JoinHideoutJaegerLoyaltyLevel { get; set; } = 2;
-    public int JoinHideoutMechanicLoyaltyLevel { get; set; } = 2;
-    public int JoinHideoutPeacekeeperLoyaltyLevel { get; set; } = 2;
-    public int JoinHideoutPraporLoyaltyLevel { get; set; } = 2;
-    public int JoinHideoutRagmanLoyaltyLevel { get; set; } = 2;
-    public int JoinHideoutSkierLoyaltyLevel { get; set; } = 2;
     public bool WipeStashOnFirstRaidEntry { get; set; } = true;
     public bool LimitTraderMailAccess { get; set; } = true;
     public bool EnableConsecutiveMapLootReduction { get; set; } = true;

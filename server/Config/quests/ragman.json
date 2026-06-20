@@ -1,0 +1,119 @@
+{
+  "effect": "joinHideout",
+  "lockedToSide": null,
+  "locales": {
+    "en": {
+      "69ec58600000000000000000 name": "New Collection",
+      "69ec58600000000000000000 description": "Hey, brother. Come in, take a look. Business is still breathing... barely.\n\nI've got clients asking for full kits, armor, rigs, packs, the whole deal. Problem is, my stock is gone. Cleaned out. Either looted or sitting in someone else's stash.\n\nYour hideout... that could work. Quiet, controlled. I could run a proper setup there, assemble kits, move product, keep things flowing.\n\nBut I need inventory first. Body armor, tactical rigs, backpacks, and some fabric to patch, reinforce, finish the work. Everything in good condition, found in raid. No trash.\n\nBring me what I need, and I'll set up shop in your hideout. After that... you'll have access to the good stuff.\n\n** Completing this quest allows Ragman to be accessible from your hideout **",
+      "69ec58600000000000000000 startedMessageText": "Armor, rigs, backpacks. That's the core. Fabric too, I use it to fix and finish things. Keep it clean, keep it usable.",
+      "69ec58600000000000000000 successMessageText": "Ohh, now this is a proper batch. Armor's solid, rigs aren't torn to hell, packs still hold weight... yeah, I can work with this.\n\nI'll move everything into your hideout and get the line running. Small operation, but efficient. From now on, you come to me there.\n\nAnd trust me... once this starts moving, you'll see the difference.",
+      "69ec58600000000000000000 failMessageText": "Nah, this isn't it. I can't build proper kits out of this junk.",
+      "69ec58600000000000000000 changeQuestMessageText": "Still not enough to run a full line. Bring more gear.",
+      "69ec589c0000000000000000": "Hand over body armor",
+      "69ec75700000000000000000": "Hand over tactical rigs",
+      "69ec58d80000000000000000": "Hand over backpacks",
+      "69ec59140000000000000000": "Hand over fabrics"
+    }
+  },
+  "newQuest": {
+    "_id": "69ec58600000000000000000",
+    "QuestName": "New Collection",
+    "name": "69ec58600000000000000000 name",
+    "description": "69ec58600000000000000000 description",
+    "note": "69ec58600000000000000000 note",
+    "startedMessageText": "69ec58600000000000000000 startedMessageText",
+    "successMessageText": "69ec58600000000000000000 successMessageText",
+    "failMessageText": "69ec58600000000000000000 failMessageText",
+    "acceptPlayerMessage": "69ec58600000000000000000 acceptPlayerMessage",
+    "declinePlayerMessage": "69ec58600000000000000000 declinePlayerMessage",
+    "completePlayerMessage": "69ec58600000000000000000 completePlayerMessage",
+    "changeQuestMessageText": "69ec58600000000000000000 changeQuestMessageText",
+    "traderId": "5ac3b934156ae10c4430e83c",
+    "location": "any",
+    "image": "/files/quest/icon/default.png",
+    "type": "Completion",
+    "side": "Pmc",
+    "restartable": true,
+    "canShowNotificationsInGame": true,
+    "instantComplete": false,
+    "secretQuest": false,
+    "isKey": false,
+    "templateId": "69ec58600000000000000000",
+    "conditions": {
+      "AvailableForStart": [
+        {
+          "id": "69ec59500000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "5ac3b934156ae10c4430e83c",
+          "compareMethod": ">=",
+          "value": 2
+        }
+      ],
+      "AvailableForFinish": [
+        {
+          "id": "69ec59500000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "5ac3b934156ae10c4430e83c",
+          "compareMethod": ">=",
+          "value": 2
+        },
+        {
+          "id": "69ec589c0000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 15,
+          "minDurability": 50,
+          "maxDurability": 100,
+          "onlyFoundInRaid": true,
+          "categories": [
+            "5448e54d4bdc2dcc718b4568" // Armor
+          ]
+        },
+        {
+          "id": "69ec75700000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 15,
+          "minDurability": 50,
+          "maxDurability": 100,
+          "onlyFoundInRaid": true,
+          "categories": [
+            "5448e5284bdc2dcb718b4567" // Vest
+          ]
+        },
+        {
+          "id": "69ec58d80000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 15,
+          "onlyFoundInRaid": true,
+          "categories": [
+            "5448e53e4bdc2d60728b4567" // Backpack
+          ],
+          "minBackpackSize": 20
+        },
+        {
+          "id": "69ec59140000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 20,
+          "onlyFoundInRaid": true,
+          "items": [
+            "5e2af41e86f774755a234b67", // Cordura polyamide fabric
+            "5e2af47786f7746d404f3aaa", // Fleece fabric
+            "5e2af4a786f7746d3f3c3400", // Ripstop fabric
+            "5e2af4d286f7746d4159f07a"  // Aramid fiber fabric
+          ]
+        }
+      ],
+      "Fail": []
+    },
+    "rewards": {
+      "Started": [],
+      "Fail": [],
+      "Success": []
+    }
+  }
+}

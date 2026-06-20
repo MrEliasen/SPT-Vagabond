@@ -1,0 +1,134 @@
+{
+  "effect": "joinHideout",
+  "lockedToSide": null,
+  "locales": {
+    "en": {
+      "69ec20200000000000000000 name": "Forward Logistics",
+      "69ec20200000000000000000 description": "Good day, my friend. I've been reviewing your hideout, and I must say, it has potential. Not just as a shelter, but as something more... structured.\n\nRight now, my operations in Tarkov rely on scattered contacts and unreliable routes. That is inefficient. What I need is a stable forward logistics node. Quiet, controlled, and away from unnecessary attention.\n\nYour location fits the criteria. But a proper operation requires preparation. Funding, provisions, and security. Dollars to keep things moving, rations to maintain personnel, and reliable weapons with ammunition to ensure nothing... interrupts business.\n\nYou provide these, and I will establish a presence in your hideout. From there, we both benefit.\n\n** Completing this quest allows Peacekeeper to be accessible from your hideout **",
+      "69ec20200000000000000000 startedMessageText": "Let's keep this simple. I need funding, provisions, and security. Dollars are preferable, clean, flexible. MREs will do for supplies. And for security, properly assembled rifles chambered in 5.56x45, with ammunition to match. Nothing improvised.",
+      "69ec20200000000000000000 successMessageText": "Excellent work. This is exactly what I needed. With these resources, I can establish a functional forward node in your hideout, discreet, efficient, and well supplied.\n\nI'll arrange for additional equipment to be moved in quietly. From now on, you'll be able to reach me there. Let's just say... this arrangement stays between us.",
+      "69ec20200000000000000000 failMessageText": "No, this won't work. I can't build a reliable operation on incomplete or substandard supplies.",
+      "69ec20200000000000000000 acceptPlayerMessage": "Understood. I'll gather everything.",
+      "69ec20200000000000000000 declinePlayerMessage": "Not now. I have other priorities.",
+      "69ec20200000000000000000 completePlayerMessage": "Here are the funds, supplies, and equipment.",
+      "69ec20200000000000000000 changeQuestMessageText": "We're not ready yet. Keep the supplies coming.",
+      "69ec205c0000000000000000": "Hand over USD",
+      "69ec20980000000000000000": "Hand over MREs",
+      "69ec22000000000000000000": "Hand over ammunition",
+      "69ec20d40000000000000000": "Hand over rifles"
+    }
+  },
+  "newQuest": {
+    "_id": "69ec20200000000000000000",
+    "QuestName": "Forward Logistics",
+    "name": "69ec20200000000000000000 name",
+    "description": "69ec20200000000000000000 description",
+    "note": "69ec20200000000000000000 note",
+    "startedMessageText": "69ec20200000000000000000 startedMessageText",
+    "successMessageText": "69ec20200000000000000000 successMessageText",
+    "failMessageText": "69ec20200000000000000000 failMessageText",
+    "acceptPlayerMessage": "69ec20200000000000000000 acceptPlayerMessage",
+    "declinePlayerMessage": "69ec20200000000000000000 declinePlayerMessage",
+    "completePlayerMessage": "69ec20200000000000000000 completePlayerMessage",
+    "changeQuestMessageText": "69ec20200000000000000000 changeQuestMessageText",
+    "traderId": "5935c25fb3acc3127c3d8cd9",
+    "location": "any",
+    "image": "/files/quest/icon/default.png",
+    "type": "Completion",
+    "side": "Pmc",
+    "restartable": true,
+    "canShowNotificationsInGame": true,
+    "instantComplete": false,
+    "secretQuest": false,
+    "isKey": false,
+    "templateId": "69ec20200000000000000000",
+    "conditions": {
+      "AvailableForStart": [
+        {
+          "id": "69ec21100000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "5935c25fb3acc3127c3d8cd9",
+          "compareMethod": ">=",
+          "value": 2
+        }
+      ],
+      "AvailableForFinish": [
+        {
+          "id": "69ec21100000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "5935c25fb3acc3127c3d8cd9",
+          "compareMethod": ">=",
+          "value": 2
+        },
+        {
+          "id": "69ec205c0000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 5000,
+          "onlyFoundInRaid": false,
+          "items": [
+            "5696686a4bdc2da3298b456a" // Dollars
+          ]
+        },
+        {
+          "id": "69ec20980000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 10,
+          "onlyFoundInRaid": true,
+          "items": [
+            "590c5f0d86f77413997acfab" // MRE ration pack
+          ]
+        },
+        {
+          "id": "69ec22000000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 1200,
+          "onlyFoundInRaid": true,
+          "categories": [
+            "5485a8684bdc2da71d8b4567" // Ammo
+          ],
+          "caliber": "Caliber556x45NATO"
+        },
+        {
+          "id": "69ec20d40000000000000000",
+          "conditionType": "WeaponAssembly",
+          "dynamicLocale": false,
+          "value": 10,
+          "categories": [
+            "5422acb9af1c889c16000029" // Weapon
+          ],
+          "caliber": "Caliber556x45NATO",
+          "hasItemFromCategory": [
+            "5448bc234bdc2d3c308b4569", // Magazine
+            "55818a594bdc2db9688b456a", // Stock
+            "5448fe7a4bdc2d6f028b456b", // Sight
+            "555ef6e44bdc2de9068b457e", // Barrel
+            "55818a104bdc2db9688b4569", // Handguard
+            "55818a684bdc2ddd698b456d"  // Pistol grip
+          ],
+          "ergonomics": { "compareMethod": ">=", "value": 10 },
+          "recoil": { "compareMethod": "<=", "value": 600 },
+          "muzzleVelocity": { "compareMethod": ">=", "value": 200 },
+          "effectiveDistance": { "compareMethod": ">=", "value": 200 },
+          "baseAccuracy": { "compareMethod": "<=", "value": 10 },
+          "magazineCapacity": { "compareMethod": ">=", "value": 5 },
+          "weight": { "compareMethod": "<=", "value": 10 },
+          "height": { "compareMethod": ">=", "value": 2 },
+          "width": { "compareMethod": ">=", "value": 4 },
+          "durability": { "compareMethod": ">=", "value": 80 },
+          "visibilityConditions": []
+        }
+      ],
+      "Fail": []
+    },
+    "rewards": {
+      "Started": [],
+      "Fail": [],
+      "Success": []
+    }
+  }
+}
