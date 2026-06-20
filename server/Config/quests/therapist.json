@@ -43,7 +43,16 @@
     "isKey": false,
     "templateId": "69ebf5f00000000000000000",
     "conditions": {
-      "AvailableForStart": [],
+      "AvailableForStart": [
+        {
+          "id": "69ec05680000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "54cb57776803fa99248b456e",
+          "compareMethod": ">=",
+          "value": 1
+        }
+      ],
       "AvailableForFinish": [
         {
           "id": "69ebf7580000000000000000",
