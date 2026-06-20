@@ -181,7 +181,7 @@ public static class QuestService
                     continue;
                 }
 
-                if (caliber != null && !MatchesCaliber(item.Properties, caliber))
+                if (caliber != null && !CaliberMatches(item, caliber, items))
                 {
                     continue;
                 }
@@ -214,7 +214,7 @@ public static class QuestService
         ext.Remove("minBackpackSize");
         ext.Remove("excludeItems");
     }
-    
+
     private static bool IsDescendantOfAny(TemplateItem item, HashSet<string> categories,
         Dictionary<MongoId, TemplateItem> items)
     {
@@ -238,10 +238,52 @@ public static class QuestService
         return false;
     }
 
-    private static bool MatchesCaliber(TemplateItemProperties props, string caliber)
+    private static bool CaliberMatches(TemplateItem item, string caliber,
+        Dictionary<MongoId, TemplateItem> items)
     {
-        return string.Equals(props.Caliber, caliber, StringComparison.Ordinal)
-               || string.Equals(props.AmmoCaliber, caliber, StringComparison.Ordinal);
+        if (string.Equals(item.Parent, BaseClasses.AMMO_BOX, StringComparison.Ordinal))
+        {
+            return string.Equals(GetAmmoBoxCaliber(item, items), caliber, StringComparison.Ordinal);
+        }
+
+        return item.Properties != null && string.Equals(item.Properties.Caliber, caliber, StringComparison.Ordinal)
+               || string.Equals(item.Properties?.AmmoCaliber, caliber, StringComparison.Ordinal);
+    }
+
+    private static string? GetAmmoBoxCaliber(TemplateItem item, Dictionary<MongoId, TemplateItem> items)
+    {
+        var stackSlots = item.Properties?.StackSlots;
+        if (stackSlots == null)
+        {
+            return null;
+        }
+
+        foreach (var slot in stackSlots)
+        {
+            var filters = slot.Properties?.Filters;
+            if (filters == null)
+            {
+                continue;
+            }
+
+            foreach (var filter in filters)
+            {
+                if (filter?.Filter == null)
+                {
+                    continue;
+                }
+
+                foreach (var cartridge in filter.Filter)
+                {
+                    if (items.TryGetValue(cartridge, out var cart) && cart.Properties?.Caliber != null)
+                    {
+                        return cart.Properties.Caliber;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     private static int TotalGridSlots(TemplateItemProperties props)
@@ -295,6 +337,6 @@ public static class QuestService
     {
         value = 0;
         return ext.TryGetValue(key, out var raw) && raw is JsonElement el
-            && el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out value);
+                                                 && el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out value);
     }
 }
