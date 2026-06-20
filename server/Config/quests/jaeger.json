@@ -1,0 +1,92 @@
+{
+  "effect": "joinHideout",
+  "lockedToSide": null,
+  "locales": {
+    "en": {
+      "69ec82900000000000000000 name": "Prepper",
+      "69ec82900000000000000000 description": "Well hello there, warrior. I've been thinking about your hideout. Not a bad place, if you know how to make it last. Walls and locks are good, but they don't mean much when your stomach is empty and your throat is dry.\n\nIf I'm going to start coming through there, I need to know the place can hold out for more than a bad evening. Food, drinks, proper reserves. Enough that a man can sit tight, recover, and not go crawling into the open because he forgot to prepare.\n\nBring me provisions and water. Stock the place properly, and I'll make it one of my stops.\n\n** Completing this quest allows Jaeger to be accessible from your hideout **",
+      "69ec82900000000000000000 startedMessageText": "Good. Start with the basics: food and drinks. Found in raid, mind you. A stash is only worth something if you can trust what's inside it.",
+      "69ec82900000000000000000 successMessageText": "You did it? Good work, fella. Now that's a proper reserve. A man can breathe easier when he knows there is food on the shelf and water close by. I'll start using your hideout as one of my stops. Come by when you need me, warrior.",
+      "69ec82900000000000000000 failMessageText": "That's no good. You can't call a place prepared if it can't even feed a tired man.",
+      "69ec82900000000000000000 acceptPlayerMessage": "I understand. I'll stock the place.",
+      "69ec82900000000000000000 declinePlayerMessage": "Not now. I can't help with that.",
+      "69ec82900000000000000000 completePlayerMessage": "Here are the provisions.",
+      "69ec82900000000000000000 changeQuestMessageText": "Keep bringing supplies. Food and water first, everything else later.",
+      "69ec82cc0000000000000000": "Hand over food",
+      "69ec83080000000000000000": "Hand over drinks"
+    }
+  },
+  "newQuest": {
+    "_id": "69ec82900000000000000000",
+    "QuestName": "Prepper",
+    "name": "69ec82900000000000000000 name",
+    "description": "69ec82900000000000000000 description",
+    "note": "69ec82900000000000000000 note",
+    "startedMessageText": "69ec82900000000000000000 startedMessageText",
+    "successMessageText": "69ec82900000000000000000 successMessageText",
+    "failMessageText": "69ec82900000000000000000 failMessageText",
+    "acceptPlayerMessage": "69ec82900000000000000000 acceptPlayerMessage",
+    "declinePlayerMessage": "69ec82900000000000000000 declinePlayerMessage",
+    "completePlayerMessage": "69ec82900000000000000000 completePlayerMessage",
+    "changeQuestMessageText": "69ec82900000000000000000 changeQuestMessageText",
+    "traderId": "5c0647fdd443bc2504c2d371",
+    "location": "any",
+    "image": "/files/quest/icon/default.png",
+    "type": "Completion",
+    "side": "Pmc",
+    "restartable": true,
+    "canShowNotificationsInGame": true,
+    "instantComplete": false,
+    "secretQuest": false,
+    "isKey": false,
+    "templateId": "69ec82900000000000000000",
+    "conditions": {
+      "AvailableForStart": [
+        {
+          "id": "69ec83800000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "5c0647fdd443bc2504c2d371",
+          "compareMethod": ">=",
+          "value": 2
+        }
+      ],
+      "AvailableForFinish": [
+        {
+          "id": "69ec83800000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "5c0647fdd443bc2504c2d371",
+          "compareMethod": ">=",
+          "value": 2
+        },
+        {
+          "id": "69ec82cc0000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 25,
+          "onlyFoundInRaid": true,
+          "categories": [
+            "5448e8d04bdc2ddf718b4569" // Food
+          ]
+        },
+        {
+          "id": "69ec83080000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 25,
+          "onlyFoundInRaid": true,
+          "categories": [
+            "5448e8d64bdc2dce718b4568" // Drink
+          ]
+        }
+      ],
+      "Fail": []
+    },
+    "rewards": {
+      "Started": [],
+      "Fail": [],
+      "Success": []
+    }
+  }
+}

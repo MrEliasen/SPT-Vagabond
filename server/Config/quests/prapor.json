@@ -1,0 +1,132 @@
+{
+  "effect": "joinHideout",
+  "lockedToSide": null,
+  "locales": {
+    "en": {
+      "69ec04000000000000000000 name": "Supply Lines",
+      "69ec04000000000000000000 description": "Hey, warrior. Situation's getting messy. My usual routes are compromised, and the stashes I relied on? Either looted or blown to hell.\n\nI've still got people out there, and they need weapons, ammo, something to hold the line. Can't rely on deliveries anymore, so we do it the old way, build our own supply points.\n\nYour hideout... not bad. Quiet, tucked away. Could work as a fallback depot. But right now, it's empty, and empty depots don't win fights.\n\nBring me rifles chambered in 5.45x39 with ammo to match, whatever you can spare. Stock it properly, and I'll start routing my business through your place.\n\n** Completing this quest allows Prapor to be accessible from your hideout **",
+      "69ec04000000000000000000 startedMessageText": "Don't overthink it. Guns, ammo. Simple. If it shoots, it works. My boys aren't picky, but they do like staying alive.",
+      "69ec04000000000000000000 successMessageText": "Ha! Now that's what I'm talking about. Proper stockpile. With this, we can actually hold something, not just run around like idiots.\n\nI'll move some of my operations through your hideout. Safer that way. You need something, you know where to find me.",
+      "69ec04000000000000000000 failMessageText": "No good. This won’t keep anyone alive for long. Bring me something useful.",
+      "69ec04000000000000000000 acceptPlayerMessage": "Got it. I’ll gather weapons and ammo.",
+      "69ec04000000000000000000 declinePlayerMessage": "Not happening. Find someone else.",
+      "69ec04000000000000000000 completePlayerMessage": "Here. Weapons and ammo, like you asked.",
+      "69ec04000000000000000000 changeQuestMessageText": "Still not enough. A depot needs to be stocked, not decorated.",
+      "69ec04780000000000000000": "Hand over ammunition",
+      "69ec04b40000000000000000": "Hand over weapons",
+      "69ec04f00000000000000000": "Hand over explosives"
+    }
+  },
+  "newQuest": {
+    "_id": "69ec04000000000000000000",
+    "QuestName": "Supply Lines",
+    "name": "69ec04000000000000000000 name",
+    "description": "69ec04000000000000000000 description",
+    "note": "69ec04000000000000000000 note",
+    "startedMessageText": "69ec04000000000000000000 startedMessageText",
+    "successMessageText": "69ec04000000000000000000 successMessageText",
+    "failMessageText": "69ec04000000000000000000 failMessageText",
+    "acceptPlayerMessage": "69ec04000000000000000000 acceptPlayerMessage",
+    "declinePlayerMessage": "69ec04000000000000000000 declinePlayerMessage",
+    "completePlayerMessage": "69ec04000000000000000000 completePlayerMessage",
+    "changeQuestMessageText": "69ec04000000000000000000 changeQuestMessageText",
+    "traderId": "54cb50c76803fa8b248b4571",
+    "location": "any",
+    "image": "/files/quest/icon/default.png",
+    "type": "Completion",
+    "side": "Pmc",
+    "restartable": true,
+    "canShowNotificationsInGame": true,
+    "instantComplete": false,
+    "secretQuest": false,
+    "isKey": false,
+    "templateId": "69ec04000000000000000000",
+    "conditions": {
+      "AvailableForStart": [
+        {
+          "id": "69ec043c0000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "54cb50c76803fa8b248b4571",
+          "compareMethod": ">=",
+          "value": 2
+        }
+      ],
+      "AvailableForFinish": [
+        {
+          "id": "69ec043c0000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "54cb50c76803fa8b248b4571",
+          "compareMethod": ">=",
+          "value": 2
+        },
+        {
+          "id": "69ec04780000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 1200,
+          "onlyFoundInRaid": true,
+          "categories": [
+            "5485a8684bdc2da71d8b4567" // Ammo
+          ],
+          "caliber": "Caliber545x39"
+        },
+        {
+          "id": "69ec04f00000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 10,
+          "onlyFoundInRaid": true,
+          "items": [
+            "5710c24ad2720bc3458b45a3", // F-1 hand grenade
+            "67b49e7335dec48e3e05e057", // F-1 hand grenade (Reduced delay)
+            "5448be9a4bdc2dfd2f8b456a", // RGD-5 hand grenade
+            "58d3db5386f77426186285a0", // M67 hand grenade
+            "617fd91e5539a84ec44ce155", // RGN hand grenade
+            "618a431df1eb8e24b8741deb", // RGO hand grenade
+            "66dae7cbeb28f0f96809f325", // V40 Mini-Grenade
+            "5e32f56fcb6d5863cc5e5ee4", // VOG-17 Khattabka improvised hand grenade
+            "5e340dcdcb6d5863cc5e5efb"  // VOG-25 Khattabka improvised hand grenade
+          ]
+        },
+        {
+          "id": "69ec04b40000000000000000",
+          "conditionType": "WeaponAssembly",
+          "dynamicLocale": false,
+          "value": 10,
+          // Any assembled 5.45x39 weapon (all AK variants), expanded from the live DB at load.
+          "categories": [
+            "5422acb9af1c889c16000029" // Weapon
+          ],
+          "caliber": "Caliber545x39",
+          "hasItemFromCategory": [
+            "5448bc234bdc2d3c308b4569", // Magazine
+            "55818a594bdc2db9688b456a", // Stock
+            "5448fe7a4bdc2d6f028b456b", // Sight
+            "555ef6e44bdc2de9068b457e", // Barrel
+            "55818a104bdc2db9688b4569", // Handguard
+            "55818a684bdc2ddd698b456d"  // Pistol grip
+          ],
+          "ergonomics": { "compareMethod": ">=", "value": 10 },
+          "recoil": { "compareMethod": "<=", "value": 600 },
+          "muzzleVelocity": { "compareMethod": ">=", "value": 200 },
+          "effectiveDistance": { "compareMethod": ">=", "value": 200 },
+          "baseAccuracy": { "compareMethod": "<=", "value": 10 },
+          "magazineCapacity": { "compareMethod": ">=", "value": 5 },
+          "weight": { "compareMethod": "<=", "value": 10 },
+          "height": { "compareMethod": ">=", "value": 2 },
+          "width": { "compareMethod": ">=", "value": 4 },
+          "durability": { "compareMethod": ">=", "value": 80 },
+          "visibilityConditions": []
+        }
+      ],
+      "Fail": []
+    },
+    "rewards": {
+      "Started": [],
+      "Fail": [],
+      "Success": []
+    }
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "effect": "joinHideout",
+  "lockedToSide": null,
+  "locales": {
+    "en": {
+      "69ec12100000000000000000 name": "Setup Shop",
+      "69ec12100000000000000000 description": "Hello, mercenary. I have a proposition that is less about weapons and more about infrastructure. My current workshop is becoming... inconvenient. Too many eyes, too many interruptions, and not enough control over the equipment. Your hideout has potential. With the right batteries, tools, electronics, and proper insulation, I can set up a small station there. Nothing luxurious. A bench, power, diagnostics, storage, and enough order to make precise work possible. Bring me the supplies, and I'll make myself available from your place when needed.",
+      "69ec12100000000000000000 startedMessageText": "Remember, I need working supplies, not dead weight. Batteries, tools, electronics, tape. Found in raid. If one bad contact ruins the whole bench, we both waste time.",
+      "69ec12100000000000000000 successMessageText": "Good. This will do. Not perfect, but perfection usually requires time, patience, and several boxes of spare parts. I will move the equipment in quietly and set up the station. After that, you can find me in your hideout. Try not to let anyone careless touch my tools.",
+      "69ec12100000000000000000 failMessageText": "No. This will not work. A bad workshop is worse than no workshop at all.",
+      "69ec12100000000000000000 acceptPlayerMessage": "I'll gather what you need.",
+      "69ec12100000000000000000 declinePlayerMessage": "Not now. I have other things to handle.",
+      "69ec12100000000000000000 completePlayerMessage": "Here are the supplies. You can set up shop now.",
+      "69ec12100000000000000000 changeQuestMessageText": "The workstation is not going to assemble itself. Keep bringing the supplies.",
+      "69ec124c0000000000000000": "Hand over batteries",
+      "69ec133c0000000000000000": "Hand over electronics",
+      "69ec13780000000000000000": "Hand over tape",
+      "69ec12880000000000000000": "Hand over tools"
+    }
+  },
+  "newQuest": {
+    "_id": "69ec12100000000000000000",
+    "QuestName": "Setup Shop",
+    "name": "69ec12100000000000000000 name",
+    "description": "69ec12100000000000000000 description",
+    "note": "69ec12100000000000000000 note",
+    "startedMessageText": "69ec12100000000000000000 startedMessageText",
+    "successMessageText": "69ec12100000000000000000 successMessageText",
+    "failMessageText": "69ec12100000000000000000 failMessageText",
+    "acceptPlayerMessage": "69ec12100000000000000000 acceptPlayerMessage",
+    "declinePlayerMessage": "69ec12100000000000000000 declinePlayerMessage",
+    "completePlayerMessage": "69ec12100000000000000000 completePlayerMessage",
+    "changeQuestMessageText": "69ec12100000000000000000 changeQuestMessageText",
+    "traderId": "5a7c2eca46aef81a7ca2145d",
+    "location": "any",
+    "image": "/files/quest/icon/default.png",
+    "type": "Completion",
+    "side": "Pmc",
+    "restartable": true,
+    "canShowNotificationsInGame": true,
+    "instantComplete": false,
+    "secretQuest": false,
+    "isKey": false,
+    "templateId": "69ec12100000000000000000",
+    "conditions": {
+      "AvailableForStart": [
+        {
+          "id": "69ec12c40000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "5a7c2eca46aef81a7ca2145d",
+          "compareMethod": ">=",
+          "value": 2
+        }
+      ],
+      "AvailableForFinish": [
+        {
+          "id": "69ec12c40000000000000000",
+          "conditionType": "TraderLoyalty",
+          "dynamicLocale": false,
+          "target": "5a7c2eca46aef81a7ca2145d",
+          "compareMethod": ">=",
+          "value": 2
+        },
+        {
+          "id": "69ec124c0000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 10,
+          "onlyFoundInRaid": true,
+          "categories": [
+            "57864ee62459775490116fc1" // Battery
+          ]
+        },
+        {
+          "id": "69ec12880000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 10,
+          "onlyFoundInRaid": true,
+          "categories": [
+            "57864bb7245977548b3b66c2" // Tool
+          ]
+        },
+        {
+          "id": "69ec133c0000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 15,
+          "onlyFoundInRaid": true,
+          "items": [
+            "5672cb724bdc2dc2088b456b", // Geiger-Muller counter
+            "5734779624597737e04bf329", // CPU fan
+            "573477e124597737dd42e191", // CPU
+            "57347c2e24597744902c94a1", // Power supply unit
+            "57347ca924597744596b4e71", // Graphics card
+            "57347baf24597738002c6178", // RAM stick
+            "590a386e86f77429692b27ab", // PC CPU
+            "590a391c86f774385a33c404", // Magnet
+            "590a3efd86f77437d351a25b", // Gas analyzer
+            "59e36c6f86f774176c10a2a7", // Power cord
+            "5734781f24597737e04bf32a", // DVD drive
+            "5c052f6886f7746b1e3db148", // Military COFDM Wireless Signal Transmitter
+            "5c052fb986f7746b2101e909", // UHF RFID Reader
+            "5c05300686f7746dce784e5d", // VPX Flash Storage Module
+            "5c05308086f7746b2101e90b", // Virtex programmable processor
+            "5c12620d86f7743f8b198b72", // Tetriz portable game console
+            "5d0375ff86f774186372f685", // Military cable
+            "5d0376a486f7747d8050965c", // Military circuit board
+            "5d1b2fa286f77425227d1674", // Electric motor
+            "5d1b304286f774253763a528", // Working LCD
+            "6389c70ca33d8c4cdf4932c6", // Electronic components
+            "6389c7750ef44505c87f5996", // Microcontroller board
+            "6389c7f115805221fb410466", // Far-forward GPS Signal Amplifier Unit
+            "6389c85357baa773a825b356", // Advanced current converter
+            "6389c88b33a719183c7f63b6", // Ultralink Satellite Internet Station
+            "66d9f7256916142b3b02276e", // Radar station spare parts
+            "66d9f7e7099cf6adcc07a369", // KOSA UAV electronic jamming device
+            "66d9f8744827a77e870ecaf1", // GARY ZONT portable electronic warfare device
+            "5bc9b720d4351e450201234b", // Golden 1GPhone smartphone
+            "5c1265fc86f7743f896a21c2", // Broken GPhone X smartphone
+            "56742c324bdc2d150f8b456d"  // Broken GPhone smartphone
+          ]
+        },
+        {
+          "id": "69ec13780000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "value": 15,
+          "onlyFoundInRaid": true,
+          "items": [
+            "5734795124597738002c6176", // Insulating tape
+            "57347c1124597737fb1379e3", // Duct tape
+            "5e2af29386f7746d4159f077"  // KEKTAPE duct tape
+          ]
+        }
+      ],
+      "Fail": []
+    },
+    "rewards": {
+      "Started": [],
+      "Fail": [],
+      "Success": []
+    }
+  }
+}

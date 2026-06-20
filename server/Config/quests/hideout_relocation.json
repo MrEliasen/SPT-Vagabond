@@ -1,0 +1,72 @@
+{
+  "effect": "relocateHideout",
+  "lockedToSide": null,
+  "locales": {
+    "en": {
+      "69eaa4700000000000000000 name": "Clean Slate",
+      "69eaa4700000000000000000 description": "So.. your little hideout setup. You really thought no one would notice? Come on. Everything gets found eventually. Question is, who finds it first.\n\nLucky for you, I know people who specialize in.. making problems disappear. Move the whole thing, clean slate, no loose ends. Quiet work. Expensive work.\n\nYou want a relocation, you pay. Simple as that. No favors, no credit.\n\nBring the roubles, I make the call, and your exit gets.. relocated. After that? Try not to screw it up again.\n\n** Completing this quests allows you to relocate your hideout (Repeatable) **",
+      "69eaa4700000000000000000 startedMessageText": "Don't stall. These guys don't sit around waiting while you count pennies. Get the money, bring it in, and we'll move your little operation.",
+      "69eaa4700000000000000000 successMessageText": "Good. Money's clean.\n\nI've already made the call. My people will handle the relocation, fast, quiet, no questions asked.\n\nYou'll get your chance to set things up again. Just don't pick some obvious dump this time, yeah? I'm not doing this twice for free.",
+      "69eaa4700000000000000000 failMessageText": "Yeah, didn't think so. Come back when you're serious.",
+      "69eaa4700000000000000000 acceptPlayerMessage": "Fine. I'll get your money.",
+      "69eaa4700000000000000000 declinePlayerMessage": "Not worth it right now.",
+      "69eaa4700000000000000000 completePlayerMessage": "Here. Count it if you want.",
+      "69eaa4700000000000000000 changeQuestMessageText": "Still waiting on the cash. No money, no move.",
+      "69eab2800000000000000000": "Hand over Roubles"
+    }
+  },
+  "newQuest": {
+    "_id": "69eaa4700000000000000000",
+    "QuestName": "Clean Slate",
+    "name": "69eaa4700000000000000000 name",
+    "description": "69eaa4700000000000000000 description",
+    "note": "69eaa4700000000000000000 note",
+    "startedMessageText": "69eaa4700000000000000000 startedMessageText",
+    "successMessageText": "69eaa4700000000000000000 successMessageText",
+    "failMessageText": "69eaa4700000000000000000 failMessageText",
+    "acceptPlayerMessage": "69eaa4700000000000000000 acceptPlayerMessage",
+    "declinePlayerMessage": "69eaa4700000000000000000 declinePlayerMessage",
+    "completePlayerMessage": "69eaa4700000000000000000 completePlayerMessage",
+    "changeQuestMessageText": "69eaa4700000000000000000 changeQuestMessageText",
+    "traderId": "58330581ace78e27b8b10cee",
+    "location": "any",
+    "image": "/files/quest/icon/default.png",
+    "type": "Completion",
+    "side": "Pmc",
+    "restartable": true,
+    "canShowNotificationsInGame": true,
+    "instantComplete": false,
+    "secretQuest": false,
+    "isKey": false,
+    "templateId": "69eaa4700000000000000000",
+    "conditions": {
+      "AvailableForStart": [],
+      "AvailableForFinish": [
+        {
+          "id": "69eab2800000000000000000",
+          "conditionType": "HandoverItem",
+          "dynamicLocale": false,
+          "globalQuestCounterId": "",
+          "dogtagLevel": 0,
+          "isEncoded": false,
+          "maxDurability": 100,
+          "minDurability": 0,
+          "index": 0,
+          "parentId": "",
+          "onlyFoundInRaid": false,
+          "visibilityConditions": [],
+          "value": 350000,
+          "items": [
+            "5449016a4bdc2d6f028b456f" // Roubles
+          ]
+        }
+      ],
+      "Fail": []
+    },
+    "rewards": {
+      "Started": [],
+      "Fail": [],
+      "Success": []
+    }
+  }
+}
