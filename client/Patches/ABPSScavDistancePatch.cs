@@ -13,8 +13,11 @@ internal class ABPSScavDistancePatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
+        var type = AccessTools.TypeByName("BotPlacementSystemClient.Patches.TryToSpawnInZonePatch")
+                   ?? AccessTools.TypeByName("acidphantasm_botplacementsystem.Patches.TryToSpawnInZonePatch");
+
         return AccessTools.Method(
-            AccessTools.TypeByName("acidphantasm_botplacementsystem.Patches.TryToSpawnInZonePatch"),
+            type,
             "IsValid",
             new[] { typeof(ISpawnPoint), typeof(IReadOnlyCollection<Player>), typeof(float) });
     }
