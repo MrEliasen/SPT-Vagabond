@@ -44,7 +44,7 @@
     "conditions": {
       "AvailableForStart": [
         {
-          "id": "69ec83800000000000000000",
+          "id": "69ec83800000000000000001",
           "conditionType": "TraderLoyalty",
           "dynamicLocale": false,
           "target": "5c0647fdd443bc2504c2d371",
