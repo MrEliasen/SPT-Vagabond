@@ -93,33 +93,18 @@
         },
         {
           "id": "69ec04b40000000000000000",
-          "conditionType": "WeaponAssembly",
+          "conditionType": "HandoverItem",
           "dynamicLocale": false,
           "value": 10,
-          // Any assembled 5.45x39 weapon (all AK variants), expanded from the live DB at load.
+          "onlyFoundInRaid": false,
+          "minDurability": 65,
+          "maxDurability": 100,
+          // Any weapon
           "categories": [
             "5422acb9af1c889c16000029" // Weapon
           ],
-          "caliber": "Caliber545x39",
-          "hasItemFromCategory": [
-            "5448bc234bdc2d3c308b4569", // Magazine
-            "55818a594bdc2db9688b456a", // Stock
-            "5448fe7a4bdc2d6f028b456b", // Sight
-            "555ef6e44bdc2de9068b457e", // Barrel
-            "55818a104bdc2db9688b4569", // Handguard
-            "55818a684bdc2ddd698b456d"  // Pistol grip
-          ],
-          "ergonomics": { "compareMethod": ">=", "value": 10 },
-          "recoil": { "compareMethod": "<=", "value": 600 },
-          "muzzleVelocity": { "compareMethod": ">=", "value": 200 },
-          "effectiveDistance": { "compareMethod": ">=", "value": 200 },
-          "baseAccuracy": { "compareMethod": "<=", "value": 10 },
-          "magazineCapacity": { "compareMethod": ">=", "value": 5 },
-          "weight": { "compareMethod": "<=", "value": 10 },
-          "height": { "compareMethod": ">=", "value": 2 },
-          "width": { "compareMethod": ">=", "value": 4 },
-          "durability": { "compareMethod": ">=", "value": 80 },
-          "visibilityConditions": []
+          // matching 545x39 caliber
+          "caliber": "Caliber545x39"
         }
       ],
       "Fail": []
