@@ -90,6 +90,11 @@ public sealed class RaidJoinPatch : AbstractPatch
             VirtualStashService.ClearAllTraderStashes(sessionId);
         }
 
+        if (VagabondConfig.Config.EnableVirtualStashes)
+        {
+            VirtualStashService.ClearTempStash(sessionId);
+        }
+
         state.IsNewCharacter = false;
 
         StateService.SaveState(sessionId, state);
