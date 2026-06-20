@@ -51,7 +51,7 @@
           "dynamicLocale": false,
           "target": "54cb57776803fa99248b456e",
           "compareMethod": ">=",
-          "value": 1
+          "value": 2
         }
       ],
       "AvailableForFinish": [
