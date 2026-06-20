@@ -13,8 +13,11 @@ internal class ABPSPmcDistancePatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
+        var type = AccessTools.TypeByName("BotPlacementSystemClient.Patches.PmcSpawnHookPatch")
+                   ?? AccessTools.TypeByName("acidphantasm_botplacementsystem.Patches.PmcSpawnHookPatch");
+
         return AccessTools.Method(
-            AccessTools.TypeByName("acidphantasm_botplacementsystem.Patches.PmcSpawnHookPatch"),
+            type,
             "IsValid",
             new[] { typeof(ISpawnPoint), typeof(IReadOnlyCollection<Player>), typeof(float) });
     }
