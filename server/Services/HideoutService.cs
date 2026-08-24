@@ -82,6 +82,11 @@ internal static class HideoutService
     {
         var currentTraderIds = new HashSet<string>(GetTraderIds(state), StringComparer.Ordinal);
         var tradersInfo = pmc.TradersInfo;
+        if (tradersInfo == null)
+        {
+            return;
+        }
+
         var isOwnHideout = !string.IsNullOrEmpty(state.HideoutState?.Id) &&
                            state.LastExit == $"{HideoutIdPrefix}{state.HideoutState?.Id}";
 

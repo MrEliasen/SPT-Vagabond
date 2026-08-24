@@ -18,11 +18,19 @@ public sealed class QuestCallbacksAcceptQuestPatch : AbstractPatch
     }
 
     [PatchPostfix]
-    public static void Postfix(MongoId sessionID, AcceptQuestRequestData info, ItemEventRouterResponse __result)
+    public static void Postfix(MongoId sessionID, AcceptQuestRequestData info,
+        ref ValueTask<ItemEventRouterResponse> __result)
     {
-        if (__result.Warnings != null && __result.Warnings.Count > 0)
+        __result = HandleAccepted(__result, sessionID, info);
+    }
+
+    private static async ValueTask<ItemEventRouterResponse> HandleAccepted(
+        ValueTask<ItemEventRouterResponse> originalResult, MongoId sessionID, AcceptQuestRequestData info)
+    {
+        var response = await originalResult.ConfigureAwait(false);
+        if (response.Warnings != null && response.Warnings.Count > 0)
         {
-            return;
+            return response;
         }
 
         var state = StateService.GetState(sessionID);
@@ -31,6 +39,8 @@ public sealed class QuestCallbacksAcceptQuestPatch : AbstractPatch
             state.QuestExfils.Add(info.QuestId);
             StateService.SaveState(sessionID, state);
         }
+
+        return response;
     }
 }
 
@@ -42,11 +52,19 @@ public sealed class QuestCallbacksCompleteQuestPatch : AbstractPatch
     }
 
     [PatchPostfix]
-    public static void Postfix(MongoId sessionID, CompleteQuestRequestData info, ItemEventRouterResponse __result)
+    public static void Postfix(MongoId sessionID, CompleteQuestRequestData info,
+        ref ValueTask<ItemEventRouterResponse> __result)
     {
-        if (__result.Warnings != null && __result.Warnings.Count > 0)
+        __result = HandleCompleted(__result, sessionID, info);
+    }
+
+    private static async ValueTask<ItemEventRouterResponse> HandleCompleted(
+        ValueTask<ItemEventRouterResponse> originalResult, MongoId sessionID, CompleteQuestRequestData info)
+    {
+        var response = await originalResult.ConfigureAwait(false);
+        if (response.Warnings != null && response.Warnings.Count > 0)
         {
-            return;
+            return response;
         }
 
         var state = StateService.GetState(sessionID);
@@ -71,5 +89,6 @@ public sealed class QuestCallbacksCompleteQuestPatch : AbstractPatch
         }
 
         StateService.SaveState(sessionID, state);
+        return response;
     }
 }

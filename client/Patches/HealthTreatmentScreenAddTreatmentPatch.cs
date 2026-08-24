@@ -1,5 +1,6 @@
-﻿using System.Reflection;
+using System.Reflection;
 using EFT.UI;
+using HarmonyLib;
 using SPT.Reflection.Patching;
 
 namespace Vagabond.Client.Patches;
@@ -8,20 +9,20 @@ internal class HealthTreatmentScreenAddTreatmentPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(HealthTreatmentServiceView).GetMethod("method_7", BindingFlags.Public | BindingFlags.Instance);
+        return AccessTools.Method(typeof(HealthTreatmentServiceView),
+            nameof(HealthTreatmentServiceView.AddTreatment));
     }
 
     [PatchPrefix]
-    protected static bool PatchPrefix(HealthTreatmentServiceView __instance, ref bool ___bool_0)
+    protected static bool PatchPrefix(HealthTreatmentServiceView __instance, ref bool ____nothingToHeal)
     {
         if (Vagabond.State.AllowPostRaidHealing)
         {
             return true;
         }
 
-        __instance.method_10();
-        ___bool_0 = false;
-
+        __instance.RecalculateCost();
+        ____nothingToHeal = false;
         return false;
     }
 }

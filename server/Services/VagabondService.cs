@@ -1,12 +1,12 @@
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Helpers.Profile;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Eft.Inventory;
 using SPTarkov.Server.Core.Models.Eft.Profile;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Servers;
-using SPTarkov.Server.Core.Services;
 using Vagabond.Common.Data;
 using Vagabond.Server.Config;
 using Vagabond.Common.Enums;
@@ -254,8 +254,8 @@ internal static class VagabondService
             return "Sandbox_high";
         }
 
-        var db = ReflectionUtil.GetService<DatabaseService>();
-        var cap = db?.GetLocations().Sandbox.Base.RequiredPlayerLevelMax ?? 20;
+        var locationTable = ReflectionUtil.GetService<LocationTable>();
+        var cap = locationTable?.Sandbox.Base.RequiredPlayerLevelMax ?? 20;
         return playerLevel > cap ? "Sandbox_high" : "Sandbox";
     }
 

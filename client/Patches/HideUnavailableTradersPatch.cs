@@ -2,8 +2,11 @@
 using System.Linq;
 using System.Reflection;
 using EFT;
+using EFT.Achievements;
 using EFT.HealthSystem;
 using EFT.InventoryLogic;
+using EFT.Quests;
+using EFT.Trading;
 using EFT.UI;
 using HarmonyLib;
 using SPT.Reflection.Patching;
@@ -15,22 +18,22 @@ public class HideUnavailableTraderCardsPatch : ModulePatch
     protected override MethodBase GetTargetMethod()
     {
         return AccessTools.Constructor(
-            typeof(TraderScreensGroup.GClass3888),
+            typeof(TraderScreensGroup.TraderScreenController),
             new[]
             {
-                typeof(TraderClass),
-                typeof(IEnumerable<TraderClass>),
+                typeof(Trader),
+                typeof(IEnumerable<Trader>),
                 typeof(Profile),
                 typeof(InventoryController),
                 typeof(IHealthController),
-                typeof(AbstractQuestControllerClass),
-                typeof(AbstractAchievementControllerClass),
-                typeof(ISession)
+                typeof(QuestController),
+                typeof(AchievementsController),
+                typeof(IEftSession)
             });
     }
 
     [PatchPrefix]
-    public static void Prefix(ref TraderClass trader, ref IEnumerable<TraderClass> tradersList)
+    public static void Prefix(ref Trader trader, ref IEnumerable<Trader> tradersList)
     {
         if (tradersList == null)
         {

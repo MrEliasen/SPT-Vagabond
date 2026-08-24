@@ -162,7 +162,7 @@ public static class RaidService
         GameWorld gameWorld,
         AbstractGame game,
         ExtractionTimersPanel timerPanel,
-        ExfiltrationControllerClass controller,
+        ExfiltrationController controller,
         ExfiltrationPoint point)
     {
         if (point?.Settings?.Name == null)
@@ -184,14 +184,14 @@ public static class RaidService
     private static void EnsureTimerPanelRow(
         GameWorld gameWorld,
         ExtractionTimersPanel timerPanel,
-        ExfiltrationControllerClass controller,
+        ExfiltrationController controller,
         ExfiltrationPoint point)
     {
-        var timersField = AccessTools.Field(typeof(ExtractionTimersPanel), "dictionary_0");
+        var timersField = AccessTools.Field(typeof(ExtractionTimersPanel), "_timers");
         var templateField = AccessTools.Field(typeof(ExtractionTimersPanel), "_timerPanelTemplate");
         var containerField = AccessTools.Field(typeof(ExtractionTimersPanel), "_container");
-        var sideField = AccessTools.Field(typeof(ExtractionTimersPanel), "eplayerSide_0");
-        var stringBuilderField = AccessTools.Field(typeof(ExtractionTimersPanel), "stringBuilder_0");
+        var sideField = AccessTools.Field(typeof(ExtractionTimersPanel), "_side");
+        var stringBuilderField = AccessTools.Field(typeof(ExtractionTimersPanel), "_stringBuilder");
 
         var timers = timersField.GetValue(timerPanel) as Dictionary<string, ExitTimerPanel>;
         var template = templateField.GetValue(timerPanel) as ExitTimerPanel;
@@ -228,7 +228,7 @@ public static class RaidService
 
         var row = UnityEngine.Object.Instantiate(template, container);
         row.Show(
-            EFTDateTimeClass.UtcNow.AddSeconds(point.Settings.MaxTime * 60f),
+            DateTimeExtensions.UtcNow.AddSeconds(point.Settings.MaxTime * 60f),
             side,
             index,
             stringBuilder,
@@ -301,20 +301,20 @@ public static class RaidService
 
         point.OnStartExtraction = (Action<ExfiltrationPoint, Player>)Delegate.Remove(
             point.OnStartExtraction,
-            new Action<ExfiltrationPoint, Player>(scenario.method_0));
+            new Action<ExfiltrationPoint, Player>(scenario.StartExtraction));
         point.OnStartExtraction = (Action<ExfiltrationPoint, Player>)Delegate.Combine(
             point.OnStartExtraction,
-            new Action<ExfiltrationPoint, Player>(scenario.method_0));
+            new Action<ExfiltrationPoint, Player>(scenario.StartExtraction));
 
         point.OnCancelExtraction = (Action<ExfiltrationPoint, Player>)Delegate.Remove(
             point.OnCancelExtraction,
-            new Action<ExfiltrationPoint, Player>(scenario.method_1));
+            new Action<ExfiltrationPoint, Player>(scenario.CancelExtraction));
         point.OnCancelExtraction = (Action<ExfiltrationPoint, Player>)Delegate.Combine(
             point.OnCancelExtraction,
-            new Action<ExfiltrationPoint, Player>(scenario.method_1));
+            new Action<ExfiltrationPoint, Player>(scenario.CancelExtraction));
 
-        point.OnStatusChanged -= scenario.method_2;
-        point.OnStatusChanged += scenario.method_2;
+        point.OnStatusChanged -= scenario.OnStatusChangedHandler;
+        point.OnStatusChanged += scenario.OnStatusChangedHandler;
 
         AppendPointToScenario(scenario, point);
         BindStatusUiHandler(game, point);
@@ -323,7 +323,7 @@ public static class RaidService
 
     private static EndByExitTrigerScenario ResolveEndByExitScenario(AbstractGame game)
     {
-        var field = AccessTools.Field(game.GetType(), "endByExitTrigerScenario_0");
+        var field = AccessTools.Field(game.GetType(), "_endByExitTrigerScenario");
         if (field?.GetValue(game) is EndByExitTrigerScenario scenarioFromField)
         {
             return scenarioFromField;
@@ -340,7 +340,7 @@ public static class RaidService
 
     private static void AppendPointToScenario(EndByExitTrigerScenario scenario, ExfiltrationPoint point)
     {
-        var field = AccessTools.Field(typeof(EndByExitTrigerScenario), "exfiltrationPoint_0");
+        var field = AccessTools.Field(typeof(EndByExitTrigerScenario), "_exitTriggers");
         if (field == null)
         {
             return;
@@ -430,6 +430,13 @@ public static class RaidService
     private static void BindStatusUiHandler(AbstractGame game, ExfiltrationPoint point)
     {
         var handlerMethod = game.GetType().GetMethod(
+                                "OnStatusChangedHandler",
+                                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                                null,
+                                new[] { typeof(ExfiltrationPoint), typeof(EExfiltrationStatus) },
+                                null)
+                            ??
+                            game.GetType().GetMethod(
                                 "method_10",
                                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                                 null,

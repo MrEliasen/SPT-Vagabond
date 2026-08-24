@@ -2,7 +2,7 @@ using System.Reflection;
 using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Profile;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Services.Profile;
 using Vagabond.Common.Data;
 using Vagabond.Server.Config;
 using Vagabond.Server.Services;

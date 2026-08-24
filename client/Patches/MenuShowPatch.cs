@@ -2,6 +2,7 @@
 using System.Reflection;
 using EFT;
 using EFT.UI;
+using EFT.UI.Matchmaker;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 using Vagabond.Client.Services;
@@ -21,7 +22,7 @@ internal class MenuShowPatch : ModulePatch
             new[]
             {
                 typeof(Profile),
-                typeof(MatchmakerPlayerControllerClass),
+                typeof(MatchmakerPlayersController),
                 typeof(ESessionMode)
             });
     }

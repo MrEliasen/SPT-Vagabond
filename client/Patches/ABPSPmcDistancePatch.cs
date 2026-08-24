@@ -11,10 +11,17 @@ namespace Vagabond.Client.Patches;
 
 internal class ABPSPmcDistancePatch : ModulePatch
 {
+    private static FieldInfo _reservedSpawnPositionsField;
+
     protected override MethodBase GetTargetMethod()
     {
         var type = AccessTools.TypeByName("BotPlacementSystemClient.Patches.PmcSpawnHookPatch")
                    ?? AccessTools.TypeByName("acidphantasm_botplacementsystem.Patches.PmcSpawnHookPatch");
+
+        var utilityType = AccessTools.TypeByName("BotPlacementSystemClient.Utils.Utility");
+        _reservedSpawnPositionsField = utilityType == null
+            ? null
+            : AccessTools.Field(utilityType, "ReservedSpawnPositions");
 
         return AccessTools.Method(
             type,
@@ -43,11 +50,23 @@ internal class ABPSPmcDistancePatch : ModulePatch
             return true;
         }
 
+        if (_reservedSpawnPositionsField?.GetValue(null) is IEnumerable<Vector3> reservedPositions)
+        {
+            foreach (var reservedPosition in reservedPositions)
+            {
+                if (Vector3.Distance(spawnPoint.Position, reservedPosition) < distance)
+                {
+                    __result = false;
+                    return false;
+                }
+            }
+        }
+
         if (players != null && players.Count != 0)
         {
             foreach (var player0 in players)
             {
-                if (player0 == null || player0.Profile.GetCorrectedNickname().StartsWith("headless_"))
+                if (player0 == null || player0.Profile.Info.MemberCategory == EMemberCategory.UnitTest)
                 {
                     continue;
                 }

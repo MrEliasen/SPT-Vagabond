@@ -1,11 +1,11 @@
 using System.Reflection;
 using SPTarkov.Reflection.Patching;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Callbacks;
+using SPTarkov.Server.Core.Helpers.Commerce;
+using SPTarkov.Server.Core.Helpers.Profile;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common;
-using SPTarkov.Server.Core.Models.Eft.ItemEvent;
-using SPTarkov.Server.Core.Routers;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Services.Commerce;
 using Vagabond.Server.Services;
 
 namespace Vagabond.Server.Patches;
@@ -14,7 +14,7 @@ public sealed class ItemEventRouterHandleEventsPatch : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(ItemEventRouter).GetMethod(nameof(ItemEventRouter.HandleEvents))!;
+        return typeof(ItemEventCallbacks).GetMethod(nameof(ItemEventCallbacks.HandleEvents))!;
     }
 
     [PatchPrefix]
@@ -24,13 +24,13 @@ public sealed class ItemEventRouterHandleEventsPatch : AbstractPatch
     }
 
     [PatchPostfix]
-    public static void Postfix(ref ValueTask<ItemEventRouterResponse> __result, IDisposable __state)
+    public static void Postfix(ref ValueTask<string> __result, IDisposable __state)
     {
         __result = AttachCleanup(__result, __state);
     }
 
-    private static async ValueTask<ItemEventRouterResponse> AttachCleanup(
-        ValueTask<ItemEventRouterResponse> originalResult,
+    private static async ValueTask<string> AttachCleanup(
+        ValueTask<string> originalResult,
         IDisposable scope)
     {
         try
@@ -52,9 +52,9 @@ public sealed class TradeHelperBuyItemPatch : AbstractPatch
     }
 
     [PatchPrefix]
-    public static void Prefix(MongoId sessionID, PmcData pmcData, out IDisposable __state)
+    public static void Prefix(MongoId sessionId, PmcData pmcData, out IDisposable __state)
     {
-        __state = VirtualStashService.OpenStash(sessionID, pmcData);
+        __state = VirtualStashService.OpenStash(sessionId, pmcData);
     }
 
     [PatchFinalizer]
@@ -73,9 +73,9 @@ public sealed class TradeHelperSellItemPatch : AbstractPatch
     }
 
     [PatchPrefix]
-    public static void Prefix(MongoId sessionID, PmcData profileWithItemsToSell, out IDisposable __state)
+    public static void Prefix(MongoId sessionId, PmcData profileWithItemsToSell, out IDisposable __state)
     {
-        __state = VirtualStashService.OpenStash(sessionID, profileWithItemsToSell);
+        __state = VirtualStashService.OpenStash(sessionId, profileWithItemsToSell);
     }
 
     [PatchFinalizer]

@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Comfort.Common;
+using CommonAssets.Scripts.Game;
 using EFT;
 using EFT.Communications;
 using EFT.Interactive;
 using EFT.Interactive.SecretExfiltrations;
 using EFT.UI;
 using HarmonyLib;
+using JsonType;
 using SPT.Reflection.Patching;
 using UnityEngine;
 using Vagabond.Client.Services;
@@ -26,17 +28,14 @@ internal class CustomExfilPlacementPatch : ModulePatch
     public static readonly Dictionary<int, CustomExfil> CustomTransitDefinitions = new();
     public static Dictionary<string, ExfiltrationPoint> ExfilPointTemplateCache = new();
 
-    private static readonly FieldInfo TransitPointLookupField =
-        AccessTools.Field(typeof(TransitControllerAbstractClass), "Dictionary_0");
-
     protected override MethodBase GetTargetMethod()
     {
-        return AccessTools.Method(typeof(ExfiltrationControllerClass),
-            nameof(ExfiltrationControllerClass.InitAllExfiltrationPoints));
+        return AccessTools.Method(typeof(ExfiltrationController),
+            nameof(ExfiltrationController.InitAllExfiltrationPoints));
     }
 
     [PatchPostfix]
-    public static void Postfix(ExfiltrationControllerClass __instance)
+    public static void Postfix(ExfiltrationController __instance)
     {
         if (ExtractsAppliedThisRaid && TransitsAppliedThisRaid)
         {
@@ -108,14 +107,14 @@ internal class CustomExfilPlacementPatch : ModulePatch
             ? $"First raid on {mapName} - Loot spawn is at normal/100%."
             : $"Raid #{Vagabond.State.LootStreakCount + 1} on {mapName} - Loot reduced to {pct}%";
 
-        NotificationManagerClass.DisplayMessageNotification(
+        NotificationManager.DisplayMessageNotification(
             text,
             ENotificationDurationType.Long);
 
         LootToastShownThisRaid = true;
     }
 
-    public static List<ExfiltrationPoint> ApplyCustomExtracts(ExfiltrationControllerClass controller, RaidLocation raid,
+    public static List<ExfiltrationPoint> ApplyCustomExtracts(ExfiltrationController controller, RaidLocation raid,
         List<CustomExfil> definitions, bool force = false)
     {
         var addedPoints = new List<ExfiltrationPoint>();
@@ -158,7 +157,7 @@ internal class CustomExfilPlacementPatch : ModulePatch
             }
             else
             {
-                var cloneObject = LocationScene.Instantiate(template.gameObject);
+                var cloneObject = UnityEngine.Object.Instantiate(template.gameObject);
                 cloneObject.name = definition.Identifier;
 
                 var clone = cloneObject.GetComponent<ExfiltrationPoint>();
@@ -346,7 +345,7 @@ internal class CustomExfilPlacementPatch : ModulePatch
         return null;
     }
 
-    public static void ApplyCustomTransits(TransitControllerAbstractClass transitController, RaidLocation raid,
+    public static void ApplyCustomTransits(TransitController transitController, RaidLocation raid,
         List<CustomExfil> definitions, bool force = false)
     {
         if (TransitsAppliedThisRaid && !force)
@@ -354,7 +353,7 @@ internal class CustomExfilPlacementPatch : ModulePatch
             return;
         }
 
-        if (definitions.Count == 0)
+        if (definitions == null || definitions.Count == 0)
         {
             return;
         }
@@ -365,13 +364,7 @@ internal class CustomExfilPlacementPatch : ModulePatch
             return;
         }
 
-        var lookup = GetTransitLookup(transitController);
-        if (lookup == null)
-        {
-            Vagabond.LogError("Unable to resolve transit point lookup on TransitControllerAbstractClass.");
-            return;
-        }
-
+        var lookup = transitController.pointsById;
         var existingTransitPoints = LocationScene.GetAllObjects<TransitPoint>().Where(x => x != null).ToList();
         if (existingTransitPoints.Count == 0)
         {
@@ -405,7 +398,7 @@ internal class CustomExfilPlacementPatch : ModulePatch
                 continue;
             }
 
-            var cloneObject = LocationScene.Instantiate(template.gameObject);
+            var cloneObject = UnityEngine.Object.Instantiate(template.gameObject);
             cloneObject.name = definition.Identifier;
             cloneObject.SetActive(true);
             cloneObject.transform.SetParent(template.transform.parent, true);
@@ -431,13 +424,13 @@ internal class CustomExfilPlacementPatch : ModulePatch
         TransitsAppliedThisRaid = true;
     }
 
-    private static void ConfigureTransitClone(TransitPoint clone, TransitControllerAbstractClass controller,
+    private static void ConfigureTransitClone(TransitPoint clone, TransitController controller,
         TransitPoint template, CustomExfil definition)
     {
         clone.Controller = controller;
         clone.Enabled = true;
         clone.IsActive = definition.IsActive;
-        clone.parameters = new LocationSettingsClass.Location.TransitParameters
+        clone.parameters = new LocationSettings.Location.TransitParameters
         {
             id = definition.TransitPointId!.Value,
             active = definition.IsActive,
@@ -524,7 +517,7 @@ internal class CustomExfilPlacementPatch : ModulePatch
         CustomExfil definition, int idOffset)
     {
         var eligibleEntryPoints = BuildEligibleEntryPoints(definition, template);
-        var settings = new LocationExitClass
+        var settings = new BackendExitTriggerSettings
         {
             Name = definition.DisplayName,
             EntryPoints = string.Join(",", eligibleEntryPoints),
@@ -758,11 +751,6 @@ internal class CustomExfilPlacementPatch : ModulePatch
         return built.ToArray();
     }
 
-    private static Dictionary<int, TransitPoint> GetTransitLookup(TransitControllerAbstractClass controller)
-    {
-        return TransitPointLookupField?.GetValue(controller) as Dictionary<int, TransitPoint>;
-    }
-
     private static string BuildTransitConditionsString(CustomExfil definition)
     {
         if (definition.Requirements == null || definition.Requirements.Count == 0)
@@ -805,7 +793,7 @@ internal class CustomExfilPlacementPatch : ModulePatch
         };
     }
 
-    public static void FilterExtractions(ExfiltrationControllerClass __instance)
+    public static void FilterExtractions(ExfiltrationController __instance)
     {
         if (__instance == null)
         {

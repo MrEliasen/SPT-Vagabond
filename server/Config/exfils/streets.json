@@ -4,7 +4,7 @@
       // this must be unique across all extracts and transits.
       "identifier": "VGB_EXT_PRAPOR",
       "displayName": "Prapor's Warehouse",
-      "templateExitName": "Sewer River",
+      "templateExitName": "E1",
       "entryPoints": "e1_2,e2_3,e3_4,e4_5,e5_6,e6_1",
       // how long it takes to extract
       "exfiltrationTime": 20,
@@ -18,7 +18,7 @@
       // this must be unique across all extracts and transits.
       "identifier": "VGB_EXT_FENCE",
       "displayName": "Fence's Hub",
-      "templateExitName": "Sewer River",
+      "templateExitName": "E1",
       "entryPoints": "e1_2,e2_3,e3_4,e4_5,e5_6,e6_1",
       // how long it takes to extract
       "exfiltrationTime": 20,

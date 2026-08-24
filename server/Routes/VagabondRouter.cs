@@ -18,7 +18,7 @@ public class VagabondRouter(
     JsonUtil jsonUtil) : StaticRouter(jsonUtil, [
     new RouteAction<EmptyRequestData>(
         "/vagabond/sync/state",
-        (_, _, sessionID, _) =>
+        (_, _, sessionID, _, _) =>
         {
             return ValueTask.FromResult(jsonUtil.Serialize(HandleSyncStateRoute(sessionID)) ??
                                         throw new NullReferenceException("Could not serialize sync response"));
@@ -26,7 +26,7 @@ public class VagabondRouter(
     ),
     new RouteAction<GetExfilDataServerRequest>(
         "/vagabond/sync/exfils",
-        (_, payload, sessionID, _) =>
+        (_, payload, sessionID, _, _) =>
         {
             return ValueTask.FromResult(jsonUtil.Serialize(HandleSyncExfilRoute(sessionID, payload)) ??
                                         throw new NullReferenceException("Could not serialize sync response"));
@@ -34,7 +34,7 @@ public class VagabondRouter(
     ),
     new RouteAction<PlaceHideoutServerRequest>(
         "/vagabond/hideout/establish",
-        (_, payload, sessionID, _) =>
+        (_, payload, sessionID, _, _) =>
         {
             return ValueTask.FromResult(
                 jsonUtil.Serialize(HandleEstablishHideoutRoute(sessionID, payload)) ??

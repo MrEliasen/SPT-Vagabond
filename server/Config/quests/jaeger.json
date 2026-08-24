@@ -68,7 +68,8 @@
           "value": 25,
           "onlyFoundInRaid": true,
           "categories": [
-            "5448e8d04bdc2ddf718b4569" // Food
+            "5448e8d04bdc2ddf718b4569"
+            // Food
           ]
         },
         {
@@ -78,7 +79,8 @@
           "value": 25,
           "onlyFoundInRaid": true,
           "categories": [
-            "5448e8d64bdc2dce718b4568" // Drink
+            "5448e8d64bdc2dce718b4568"
+            // Drink
           ]
         }
       ],

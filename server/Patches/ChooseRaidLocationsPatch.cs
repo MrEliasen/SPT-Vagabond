@@ -1,8 +1,9 @@
 using System.Reflection;
-using System.Text.Json.Nodes;
 using SPTarkov.Reflection.Patching;
-using SPTarkov.Server.Core.Callbacks;
+using SPTarkov.Server.Core.Controllers;
 using SPTarkov.Server.Core.Models.Common;
+using SPTarkov.Server.Core.Models.Eft.Common;
+using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using Vagabond.Common.Data;
 using Vagabond.Common.Enums;
 using Vagabond.Server.Config;
@@ -14,54 +15,46 @@ public sealed class ChooseRaidLocationsPatch : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(LocationCallbacks).GetMethod(nameof(LocationCallbacks.GetLocationData))!;
+        return typeof(LocationController).GetMethod(nameof(LocationController.GenerateAll))!;
     }
 
     [PatchPostfix]
-    public static void Postfix(MongoId sessionID, ref ValueTask<string> __result)
+    public static void Postfix(MongoId sessionId, ref LocationsGenerateAllResponse __result)
     {
-        var serverOwnerSessionId = FikaAdapter.GetRaidOwnerSessionId(sessionID);
-        __result = RewriteResponseAsync(serverOwnerSessionId, __result);
+        var serverOwnerSessionId = FikaAdapter.GetRaidOwnerSessionId(sessionId);
+        RewriteResponse(serverOwnerSessionId, __result);
     }
 
-    private static async ValueTask<string> RewriteResponseAsync(MongoId sessionId, ValueTask<string> originalResult)
+    private static void RewriteResponse(MongoId sessionId, LocationsGenerateAllResponse response)
     {
-        string jsonString = await originalResult;
-
-        JsonNode? root = JsonNode.Parse(jsonString);
-        if (root is null)
-        {
-            return jsonString;
-        }
-
         if (!VagabondService.ShouldApplyVagabondRules(sessionId))
         {
-            return jsonString;
+            return;
         }
 
         var pmc = VagabondService.GetPmcProfile(sessionId);
         if (pmc == null || pmc.CharacterData?.PmcData == null)
         {
             VagabondLogger.Error($"Raid extractions: could not resolve PMC profile for {sessionId}.");
-            return jsonString;
+            return;
         }
 
         var state = StateService.GetState(sessionId);
         if (!state.VagabondModeEnabled)
         {
             VagabondLogger.Error($"Missing state {sessionId}.");
-            return jsonString;
+            return;
         }
 
         if (string.IsNullOrEmpty(state.CurrentMap) || VagabondConfig.Config.EnablePickRaidLocation)
         {
-            return jsonString;
+            return;
         }
 
         RaidLocation currentMap = VagabondLocations.NormaliseMapName(state.CurrentMap);
         if (currentMap == RaidLocation.Nil)
         {
-            return jsonString;
+            return;
         }
 
         // a bit dirty, as I should then limit what time they can pick then.. but.. so be it for now
@@ -70,13 +63,11 @@ public sealed class ChooseRaidLocationsPatch : AbstractPatch
             currentMap = RaidLocation.FactoryDay;
         }
 
-        JsonObject? data = root["data"]?.AsObject();
-        JsonObject? locations = data?["locations"]?.AsObject();
-
+        var locations = response.Locations;
         if (locations == null)
         {
             VagabondLogger.Error($"locations is null {sessionId}.");
-            return jsonString;
+            return;
         }
 
         HashSet<string> allowedMapIds = new(StringComparer.OrdinalIgnoreCase);
@@ -114,31 +105,23 @@ public sealed class ChooseRaidLocationsPatch : AbstractPatch
 
         if (allowedMapIds.Count == 0)
         {
-            return jsonString;
+            return;
         }
 
-        foreach (string locationKey in locations.Select(kv => kv.Key).ToList())
+        foreach (MongoId locationKey in locations.Keys.ToList())
         {
-            if (!allowedMapIds.Contains(locationKey))
+            if (!allowedMapIds.Contains(locationKey.ToString()))
             {
-                JsonObject? location = locations[locationKey]?.AsObject();
-                if (location != null)
-                {
-                    location["enabled"] = false;
-                }
+                locations[locationKey] = locations[locationKey] with { Enabled = false };
             }
         }
 
         var questExfils = QuestService.BuildExfilList(state);
 
-        foreach (string locationKey in locations.Select(x => x.Key).ToList())
+        foreach (MongoId locationKey in locations.Keys.ToList())
         {
-            JsonObject? location = locations[locationKey]?.AsObject();
-            JsonArray? exits = location?["exits"]?.AsArray();
-            JsonArray? secretExits = location?["secretExits"]?.AsArray();
-            bool enabled = location?["enabled"]?.GetValue<bool>() ?? true;
-
-            if (!enabled)
+            var location = locations[locationKey];
+            if (!location.Enabled)
             {
                 continue;
             }
@@ -146,52 +129,30 @@ public sealed class ChooseRaidLocationsPatch : AbstractPatch
             VagabondLocations.IdToName.TryGetValue(locationKey, out var mapName);
             questExfils.TryGetValue(mapName!, out var mapQuestExfils);
 
-            if (exits != null)
+            var exits = location.Exits?
+                .Where(exfil => ShouldKeepExtract(exfil, locationKey, mapQuestExfils ?? []))
+                .ToList();
+
+            var secretExits = location.SecretExits?
+                .Where(exfil => ShouldKeepExtract(exfil, locationKey, mapQuestExfils ?? []))
+                .ToList();
+
+            locations[locationKey] = location with
             {
-                for (int i = exits.Count - 1; i >= 0; i--)
-                {
-                    JsonObject? exfil = exits[i]?.AsObject();
-
-                    if (exfil is null)
-                    {
-                        exits.RemoveAt(i);
-                        continue;
-                    }
-
-                    if (!ShouldKeepExtract(exfil, locationKey, mapQuestExfils ?? []))
-                    {
-                        exits.RemoveAt(i);
-                    }
-                }
-            }
-
-            if (secretExits != null)
-            {
-                for (int i = secretExits.Count - 1; i >= 0; i--)
-                {
-                    JsonObject? exfil = secretExits[i]?.AsObject();
-                    if (exfil == null || !ShouldKeepExtract(exfil, locationKey, mapQuestExfils ?? []))
-                    {
-                        secretExits.RemoveAt(i);
-                    }
-                }
-            }
+                Exits = exits ?? [],
+                SecretExits = secretExits
+            };
         }
-
-        return root.ToJsonString(new System.Text.Json.JsonSerializerOptions
-        {
-            WriteIndented = false
-        });
     }
 
-    private static bool ShouldKeepExtract(JsonObject exfil, string locationKey, List<string> mapQuestExfils)
+    private static bool ShouldKeepExtract(Exit exfil, string locationKey, List<string> mapQuestExfils)
     {
         return IsCustomExtract(exfil, locationKey) || IsQuestExtract(exfil, mapQuestExfils);
     }
 
-    private static bool IsQuestExtract(JsonObject exfil, List<string> mapQuestExfils)
+    private static bool IsQuestExtract(Exit exfil, List<string> mapQuestExfils)
     {
-        var templ = exfil["Name"]?.GetValue<string>();
+        var templ = exfil.Name;
         if (templ == null)
         {
             return false;
@@ -200,9 +161,9 @@ public sealed class ChooseRaidLocationsPatch : AbstractPatch
         return mapQuestExfils.Contains(templ);
     }
 
-    private static bool IsCustomExtract(JsonObject exfil, MongoId locationKey)
+    private static bool IsCustomExtract(Exit exfil, MongoId locationKey)
     {
-        string? name = exfil["Name"]?.GetValue<string>();
+        string? name = exfil.Name;
         var raid = VagabondLocations.NormaliseMapName(locationKey);
         if (!VagabondLocations.IdToName.TryGetValue(locationKey, out var mapName))
         {

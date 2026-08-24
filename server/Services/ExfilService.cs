@@ -1,6 +1,6 @@
 ﻿using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Enums;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using Vagabond.Common.Data;
 using Vagabond.Common.Definitions;
 using Vagabond.Common.Enums;
@@ -20,9 +20,8 @@ internal static class ExfilService
     // API-added entires offset start
     private static int _nextApiExfilOffset = 20000;
 
-    private static Location? RaidLocationToLocation(DatabaseService databaseService, RaidLocation raid)
+    private static Location? RaidLocationToLocation(LocationTable locations, RaidLocation raid)
     {
-        var locations = databaseService.GetLocations();
         return raid switch
         {
             RaidLocation.Customs => locations.Bigmap,
@@ -43,9 +42,8 @@ internal static class ExfilService
 
     // GroundZero fix
     private static IEnumerable<(Location location, string mapName)> RaidLocationToSptLocations(
-        DatabaseService databaseService, RaidLocation raid)
+        LocationTable locations, RaidLocation raid)
     {
-        var locations = databaseService.GetLocations();
         switch (raid)
         {
             case RaidLocation.Customs: yield return (locations.Bigmap, "bigmap"); break;
@@ -108,7 +106,7 @@ internal static class ExfilService
         _loadedHideoutExfils.Remove(state.Id);
     }
 
-    public static void Apply(DatabaseService databaseService)
+    public static void Apply(LocationTable locationTable)
     {
         foreach (var loc in Enum.GetValues(typeof(RaidLocation)).Cast<RaidLocation>())
         {
@@ -152,7 +150,7 @@ internal static class ExfilService
 
         foreach (var (raid, entry) in ExfilsConfig.Maps)
         {
-            var sptLocs = RaidLocationToSptLocations(databaseService, raid).ToList();
+            var sptLocs = RaidLocationToSptLocations(locationTable, raid).ToList();
             if (sptLocs.Count == 0)
             {
                 continue;
@@ -173,9 +171,12 @@ internal static class ExfilService
 
         foreach (var ext in extracts)
         {
-            ext.EntryPoints = pmcEntryPoints;
+            var entryPoints = string.IsNullOrWhiteSpace(ext.EntryPoints)
+                ? pmcEntryPoints
+                : ext.EntryPoints;
+
             CustomExfils[raid][mapName].Add(ext);
-            AddOrReplaceExtract(location, ext);
+            AddOrReplaceExtract(location, ext, entryPoints);
         }
 
         var i = 1;
@@ -200,18 +201,18 @@ internal static class ExfilService
                       || string.Equals(x.Identifier, name, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static void AddOrReplaceExtract(Location location, CustomExfil definition)
+    private static void AddOrReplaceExtract(Location location, CustomExfil definition, string entryPoints)
     {
         var allExtracts = location.AllExtracts.ToList();
         allExtracts.RemoveAll(x => string.Equals(x.Name, definition.DisplayName, StringComparison.OrdinalIgnoreCase)
                                    || string.Equals(x.SptName, definition.Identifier,
                                        StringComparison.OrdinalIgnoreCase));
-        allExtracts.Add(CreateExit(definition));
+        allExtracts.Add(CreateExit(definition, entryPoints));
         location.AllExtracts = allExtracts;
 
         var baseExits = location.Base.Exits.ToList();
         baseExits.RemoveAll(x => string.Equals(x.Name, definition.DisplayName, StringComparison.OrdinalIgnoreCase));
-        baseExits.Add(CreateExit(definition));
+        baseExits.Add(CreateExit(definition, entryPoints));
         location.Base.Exits = baseExits;
     }
 
@@ -242,7 +243,7 @@ internal static class ExfilService
         location.Base.Transits = transits;
     }
 
-    private static AllExtractsExit CreateExit(CustomExfil definition)
+    private static AllExtractsExit CreateExit(CustomExfil definition, string entryPoints)
     {
         return new AllExtractsExit
         {
@@ -252,7 +253,7 @@ internal static class ExfilService
             ChancePVE = 100,
             Count = 0,
             CountPVE = 0,
-            EntryPoints = definition.EntryPoints,
+            EntryPoints = entryPoints,
             EventAvailable = false,
             ExfiltrationTime = definition.ExfiltrationTime,
             ExfiltrationTimePVE = definition.ExfiltrationTime,
@@ -273,7 +274,8 @@ internal static class ExfilService
 
     private static string GetPmcEntryPoints(Location location)
     {
-        var entryPoints = location.Base.Exits
+        // 4.1.x: base.json exits no longer carry Side, allExtracts.json does
+        var entryPoints = location.AllExtracts
             .Where(x => string.Equals(x.Side, "Pmc", StringComparison.OrdinalIgnoreCase))
             .Select(x => x.EntryPoints)
             .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -490,8 +492,8 @@ internal static class ExfilService
             return;
         }
 
-        var databaseService = ReflectionUtil.GetService<DatabaseService>();
-        var location = RaidLocationToLocation(databaseService!, raid);
+        var locationTable = ReflectionUtil.GetService<LocationTable>();
+        var location = RaidLocationToLocation(locationTable!, raid);
         if (location == null)
         {
             VagabondLogger.Warning($"AddCustomExfils: no live location for raid '{raid}'; nothing applied.");
@@ -551,13 +553,13 @@ internal static class ExfilService
             return false;
         }
 
-        var databaseService = ReflectionUtil.GetService<DatabaseService>();
-        if (databaseService == null)
+        var locationTable = ReflectionUtil.GetService<LocationTable>();
+        if (locationTable == null)
         {
             return true;
         }
 
-        var location = RaidLocationToLocation(databaseService, raid);
+        var location = RaidLocationToLocation(locationTable, raid);
 
         if (location != null)
         {

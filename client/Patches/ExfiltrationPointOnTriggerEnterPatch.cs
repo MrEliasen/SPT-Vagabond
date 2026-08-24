@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using EFT.Interactive;
-using HarmonyLib;
 using SPT.Reflection.Patching;
 using UnityEngine;
 using Vagabond.Client.Services;
@@ -11,7 +10,9 @@ internal class ExfiltrationPointOnTriggerEnterPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return AccessTools.Method(typeof(ExfiltrationPoint), nameof(ExfiltrationPoint.OnTriggerEnter));
+        return typeof(ExfiltrationPoint).GetMethod(
+            "IPhysicsTrigger.OnTriggerEnter",
+            BindingFlags.Instance | BindingFlags.NonPublic);
     }
 
     [PatchPrefix]

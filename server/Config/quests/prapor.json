@@ -69,7 +69,8 @@
           "value": 10,
           "onlyFoundInRaid": true,
           "categories": [
-            "543be5cb4bdc2deb348b4568" // AmmoBox
+            "543be5cb4bdc2deb348b4568"
+            // AmmoBox
           ],
           "caliber": "Caliber545x39"
         },
@@ -80,15 +81,24 @@
           "value": 10,
           "onlyFoundInRaid": true,
           "items": [
-            "5710c24ad2720bc3458b45a3", // F-1 hand grenade
-            "67b49e7335dec48e3e05e057", // F-1 hand grenade (Reduced delay)
-            "5448be9a4bdc2dfd2f8b456a", // RGD-5 hand grenade
-            "58d3db5386f77426186285a0", // M67 hand grenade
-            "617fd91e5539a84ec44ce155", // RGN hand grenade
-            "618a431df1eb8e24b8741deb", // RGO hand grenade
-            "66dae7cbeb28f0f96809f325", // V40 Mini-Grenade
-            "5e32f56fcb6d5863cc5e5ee4", // VOG-17 Khattabka improvised hand grenade
-            "5e340dcdcb6d5863cc5e5efb"  // VOG-25 Khattabka improvised hand grenade
+            "5710c24ad2720bc3458b45a3",
+            // F-1 hand grenade
+            "67b49e7335dec48e3e05e057",
+            // F-1 hand grenade (Reduced delay)
+            "5448be9a4bdc2dfd2f8b456a",
+            // RGD-5 hand grenade
+            "58d3db5386f77426186285a0",
+            // M67 hand grenade
+            "617fd91e5539a84ec44ce155",
+            // RGN hand grenade
+            "618a431df1eb8e24b8741deb",
+            // RGO hand grenade
+            "66dae7cbeb28f0f96809f325",
+            // V40 Mini-Grenade
+            "5e32f56fcb6d5863cc5e5ee4",
+            // VOG-17 Khattabka improvised hand grenade
+            "5e340dcdcb6d5863cc5e5efb"
+            // VOG-25 Khattabka improvised hand grenade
           ]
         },
         {
@@ -101,7 +111,8 @@
           "maxDurability": 100,
           // Any weapon
           "categories": [
-            "5422acb9af1c889c16000029" // Weapon
+            "5422acb9af1c889c16000029"
+            // Weapon
           ],
           // matching 545x39 caliber
           "caliber": "Caliber545x39"

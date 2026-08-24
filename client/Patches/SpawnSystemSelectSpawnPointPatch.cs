@@ -13,11 +13,11 @@ internal class SpawnSystemSelectSpawnPointPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return AccessTools.Method(typeof(SpawnSystemClass), nameof(SpawnSystemClass.SelectSpawnPoint));
+        return AccessTools.Method(typeof(SpawnSystem), "EFT.Game.Spawning.ISpawnSystem.SelectSpawnPoint");
     }
 
     [PatchPrefix]
-    private static bool Prefix(SpawnSystemClass __instance, ESpawnCategory category, EPlayerSide side,
+    private static bool Prefix(SpawnSystem __instance, ESpawnCategory category, EPlayerSide side,
         ref ISpawnPoint __result)
     {
         if (category != ESpawnCategory.Player)
@@ -27,7 +27,7 @@ internal class SpawnSystemSelectSpawnPointPatch : ModulePatch
 
         ForcedSpawnService.Clear();
 
-        var forcedSpawn = __instance.ISpawnPoints
+        var forcedSpawn = __instance._spawnPoints
             .FirstOrDefault(sp =>
                 sp != null &&
                 ForcedSpawnPointIds.IsForcedSpawnId(sp.Id) &&
@@ -39,7 +39,7 @@ internal class SpawnSystemSelectSpawnPointPatch : ModulePatch
             return true;
         }
 
-        var referenceSpawn = __instance.ISpawnPoints
+        var referenceSpawn = __instance._spawnPoints
             .Where(sp =>
                 sp != null &&
                 !ForcedSpawnPointIds.IsForcedSpawnId(sp.Id) &&

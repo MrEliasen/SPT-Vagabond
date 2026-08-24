@@ -1,4 +1,4 @@
-using SPTarkov.Server.Core.Services.Mod;
+using SPTarkov.Server.Core.Services.Modding;
 using Vagabond.Common.Definitions;
 
 namespace Vagabond.Server.Services;
@@ -15,12 +15,13 @@ internal static class StateService
             return new();
         }
 
-        return profileDataService.GetProfileData<VagabondSessionState>(sessionId, ModKey) ?? new VagabondSessionState();
+        return profileDataService.GetProfileDataAsync<VagabondSessionState>(sessionId, ModKey)
+            .GetAwaiter().GetResult() ?? new VagabondSessionState();
     }
 
     public static void SaveState(string sessionId, VagabondSessionState state)
     {
         var profileDataService = ReflectionUtil.GetService<ProfileDataService>();
-        profileDataService?.SaveProfileData(sessionId, ModKey, state);
+        profileDataService?.SaveProfileDataAsync(sessionId, ModKey, state).GetAwaiter().GetResult();
     }
 }

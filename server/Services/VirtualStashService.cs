@@ -5,7 +5,7 @@ using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Eft.ItemEvent;
 using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Routers;
-using SPTarkov.Server.Core.Services.Mod;
+using SPTarkov.Server.Core.Services.Modding;
 using SPTarkov.Server.Core.Utils.Cloners;
 using Vagabond.Server.Models;
 using Vagabond.Common;
@@ -145,11 +145,11 @@ internal static class VirtualStashService
 
         foreach (var stashKey in HideoutService.GetStashKeys())
         {
-            profileDataService.SaveProfileData(sessionId, GetProfileStashKey(stashKey), new VirtualStashData
+            profileDataService.SaveProfileDataAsync(sessionId, GetProfileStashKey(stashKey), new VirtualStashData
             {
                 StashKey = stashKey,
                 Items = new List<Item>()
-            });
+            }).GetAwaiter().GetResult();
         }
     }
 
@@ -172,11 +172,11 @@ internal static class VirtualStashService
             }
         }
 
-        profileDataService.SaveProfileData(sessionId, GetProfileStashKey(TempStashKey), new VirtualStashData
+        profileDataService.SaveProfileDataAsync(sessionId, GetProfileStashKey(TempStashKey), new VirtualStashData
         {
             StashKey = TempStashKey,
             Items = new List<Item>()
-        });
+        }).GetAwaiter().GetResult();
     }
 
     public static ItemEventRouterResponse CreateBlockedActionResponse(MongoId sessionId, string? message = null)
@@ -292,11 +292,11 @@ internal static class VirtualStashService
         var itemsToPersist = CloneItems(currentVirtualItems);
         UpdateRootReferences(itemsToPersist, stashRootId, sortingTableRootId);
 
-        profileDataService.SaveProfileData(sessionId, GetProfileStashKey(stashKey), new VirtualStashData
+        profileDataService.SaveProfileDataAsync(sessionId, GetProfileStashKey(stashKey), new VirtualStashData
         {
             StashKey = stashKey,
             Items = itemsToPersist
-        });
+        }).GetAwaiter().GetResult();
     }
 
     private static List<Item> LoadProjectedItems(
@@ -317,8 +317,9 @@ internal static class VirtualStashService
             return new List<Item>();
         }
 
-        var profileData =
-            profileDataService.GetProfileData<VirtualStashData>(sessionId, GetProfileStashKey(stashKey));
+        var profileData = profileDataService
+            .GetProfileDataAsync<VirtualStashData>(sessionId, GetProfileStashKey(stashKey))
+            .GetAwaiter().GetResult();
         var items = CloneItems(profileData?.Items);
         RebindRootReferences(items, targetStashRootId, targetSortingTableRootId);
         return items;
@@ -518,7 +519,8 @@ internal static class VirtualStashService
         }
 
         var oldKey = GetProfileStashKey(oldStashKey);
-        var oldData = profileDataService.GetProfileData<VirtualStashData>(sessionId, oldKey);
+        var oldData = profileDataService.GetProfileDataAsync<VirtualStashData>(sessionId, oldKey)
+            .GetAwaiter().GetResult();
         if (oldData == null)
         {
             VagabondLogger.Success($"Stash migration successful.");
@@ -526,14 +528,15 @@ internal static class VirtualStashService
         }
 
         var newKey = GetProfileStashKey(newStashKey);
-        var existing = profileDataService.GetProfileData<VirtualStashData>(sessionId, newKey);
+        var existing = profileDataService.GetProfileDataAsync<VirtualStashData>(sessionId, newKey)
+            .GetAwaiter().GetResult();
         if (existing == null)
         {
-            profileDataService.SaveProfileData(sessionId, newKey, new VirtualStashData
+            profileDataService.SaveProfileDataAsync(sessionId, newKey, new VirtualStashData
             {
                 StashKey = newStashKey,
                 Items = oldData.Items
-            });
+            }).GetAwaiter().GetResult();
         }
 
         // delete the old stash file

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using EFT;
+using EFT.Communications;
 using EFT.InventoryLogic;
 using HarmonyLib;
 using SPT.Reflection.Patching;
@@ -17,8 +18,8 @@ internal class TransitInteractionPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return AccessTools.Method(typeof(TransitInteractionControllerAbstractClass),
-            nameof(TransitInteractionControllerAbstractClass.method_14));
+        return AccessTools.Method(typeof(ClientTransitController),
+            nameof(ClientTransitController.ShowInteraction));
     }
 
     [PatchPrefix]
@@ -34,7 +35,7 @@ internal class TransitInteractionPatch : ModulePatch
             return true;
         }
 
-        NotificationManagerClass.DisplayWarningNotification(string.IsNullOrWhiteSpace(failReason)
+        NotificationManager.DisplayWarningNotification(string.IsNullOrWhiteSpace(failReason)
             ? "Requirements not met"
             : failReason);
         return false;
@@ -156,19 +157,19 @@ internal class TransitInteractionLabelPatch : ModulePatch
 
     protected override MethodBase GetTargetMethod()
     {
-        return AccessTools.Method(typeof(TransitInteractionControllerAbstractClass),
-            nameof(TransitInteractionControllerAbstractClass.method_14));
+        return AccessTools.Method(typeof(ClientTransitController),
+            nameof(ClientTransitController.ShowInteraction));
     }
 
     [PatchPostfix]
-    private static void Postfix(TransitInteractionControllerAbstractClass __instance, int pointId, Player player)
+    private static void Postfix(ClientTransitController __instance, int pointId, Player player)
     {
         if (!CustomExfilPlacementPatch.CustomTransitDefinitions.TryGetValue(pointId, out var def))
         {
             return;
         }
 
-        var actionsRef = __instance.ActionsReturnClass;
+        var actionsRef = __instance.AvailableInteractionState;
         var actions = actionsRef?.Actions;
         if (actions == null || actions.Count == 0)
         {
@@ -253,27 +254,27 @@ internal class TransitInteractionLabelPatch : ModulePatch
     }
 }
 
-// fires after the 2s "plant" succeeds and before the equipment screen.
+// fires after the 2s "plant" resolves, before the original queues the transfer screen.
 internal class TransitCommitPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
         return AccessTools.FirstMethod(
-            typeof(TransitInteractionControllerAbstractClass.Class1179),
+            typeof(ClientTransitController.CG_InteractionAction),
             m => m.Name == "method_0");
     }
 
-    [PatchPostfix]
-    private static void Postfix(TransitInteractionControllerAbstractClass.Class1179 __instance, bool successful)
+    [PatchPrefix]
+    private static bool Prefix(ClientTransitController.CG_InteractionAction __instance, ref bool successful)
     {
         if (!successful)
         {
-            return;
+            return true;
         }
 
         if (!CustomExfilPlacementPatch.CustomTransitDefinitions.TryGetValue(__instance.pointId, out var def))
         {
-            return;
+            return true;
         }
 
         foreach (var req in def.Requirements)
@@ -293,13 +294,16 @@ internal class TransitCommitPatch : ModulePatch
 
             if (!TransitCostService.TryDeductCost(__instance.player, id, price, out var err))
             {
-                NotificationManagerClass.DisplayWarningNotification($"Transit aborted: {err}");
-                __instance.TransitInteractionControllerAbstractClass.method_18(__instance.player);
-                return;
+                NotificationManager.DisplayWarningNotification($"Transit aborted: {err}");
+                __instance.ClientTransitController.Cancel(__instance.player);
+                successful = false;
+                return true;
             }
 
-            NotificationManagerClass.DisplayMessageNotification(
+            NotificationManager.DisplayMessageNotification(
                 $"Paid {price} {TransitInteractionPatch.CurrencyShortName(id)}");
         }
+
+        return true;
     }
 }

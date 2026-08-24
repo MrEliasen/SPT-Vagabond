@@ -69,7 +69,8 @@
           "maxDurability": 100,
           "onlyFoundInRaid": true,
           "categories": [
-            "5448e54d4bdc2dcc718b4568" // Armor
+            "5448e54d4bdc2dcc718b4568"
+            // Armor
           ]
         },
         {
@@ -81,7 +82,8 @@
           "maxDurability": 100,
           "onlyFoundInRaid": true,
           "categories": [
-            "5448e5284bdc2dcb718b4567" // Vest
+            "5448e5284bdc2dcb718b4567"
+            // Vest
           ]
         },
         {
@@ -91,7 +93,8 @@
           "value": 15,
           "onlyFoundInRaid": true,
           "categories": [
-            "5448e53e4bdc2d60728b4567" // Backpack
+            "5448e53e4bdc2d60728b4567"
+            // Backpack
           ],
           "minBackpackSize": 20
         },
@@ -102,10 +105,14 @@
           "value": 20,
           "onlyFoundInRaid": true,
           "items": [
-            "5e2af41e86f774755a234b67", // Cordura polyamide fabric
-            "5e2af47786f7746d404f3aaa", // Fleece fabric
-            "5e2af4a786f7746d3f3c3400", // Ripstop fabric
-            "5e2af4d286f7746d4159f07a"  // Aramid fiber fabric
+            "5e2af41e86f774755a234b67",
+            // Cordura polyamide fabric
+            "5e2af47786f7746d404f3aaa",
+            // Fleece fabric
+            "5e2af4a786f7746d3f3c3400",
+            // Ripstop fabric
+            "5e2af4d286f7746d4159f07a"
+            // Aramid fiber fabric
           ]
         }
       ],

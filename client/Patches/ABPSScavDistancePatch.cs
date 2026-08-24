@@ -47,7 +47,7 @@ internal class ABPSScavDistancePatch : ModulePatch
         {
             foreach (var player in players)
             {
-                if (player == null || player.Profile.GetCorrectedNickname().StartsWith("headless_"))
+                if (player == null || player.Profile.Info.MemberCategory == EMemberCategory.UnitTest)
                 {
                     continue;
                 }

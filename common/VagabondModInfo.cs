@@ -8,5 +8,5 @@ public static class VagabondModInfo
     public const string Author = "Oogabooga.dev";
     public const string Url = "https://github.com/MrEliasen/spt-vagabond";
     public const string License = "MIT";
-    public const string SptVersion = "~4.0.13";
+    public const string SptVersion = "~4.1.0";
 }

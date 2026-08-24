@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Linq;
 using System.Reflection;
+using EFT.Communications;
 using EFT.UI;
+using EFT.UI.Screens;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 using Vagabond.Client.Services;
@@ -18,13 +20,13 @@ public class SelectAvailableTraderPatch : ModulePatch
     [PatchPostfix]
     public static void Postfix(TraderScreensGroup __instance)
     {
-        var available = __instance.IEnumerable_0?
+        var available = __instance.TradersList?
             .Where(x => x != null && x.Info != null && x.Info.Available)
             .ToList();
 
         if (available == null || available.Count == 0)
         {
-            NotificationManagerClass.DisplayWarningNotification("No traders available at this location.");
+            NotificationManager.DisplayWarningNotification("No traders available at this location.");
 
             if (UIMessageService.Instance != null)
             {
@@ -34,15 +36,15 @@ public class SelectAvailableTraderPatch : ModulePatch
             return;
         }
 
-        if (!(__instance.TraderClass != null && available.Any(x => x.Id == __instance.TraderClass.Id)))
+        if (!(__instance.Trader != null && available.Any(x => x.Id == __instance.Trader.Id)))
         {
-            __instance.method_6(available[0]);
+            __instance.SelectTrader(available[0]);
         }
     }
 
     private static IEnumerator CloseNextFrame()
     {
         yield return null;
-        _ = CurrentScreenSingletonClass.Instance.TryReturnToRootScreen();
+        _ = EftScreenManager.Instance.TryReturnToRootScreen();
     }
 }

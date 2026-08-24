@@ -15,14 +15,15 @@ public sealed class InventoryCallbacksTagItemPatch : AbstractPatch
     }
 
     [PatchPrefix]
-    public static bool Prefix(MongoId sessionId, ref ItemEventRouterResponse __result)
+    public static bool Prefix(MongoId sessionId, ref ValueTask<ItemEventRouterResponse> __result)
     {
         if (!VirtualStashService.IsVirtualStashEnabled(sessionId))
         {
             return true;
         }
 
-        __result = VirtualStashService.CreateBlockedActionResponse(sessionId);
+        __result = new ValueTask<ItemEventRouterResponse>(
+            VirtualStashService.CreateBlockedActionResponse(sessionId));
         return false;
     }
 }
@@ -35,7 +36,8 @@ public sealed class InventoryCallbacksSortInventoryPatch : AbstractPatch
     }
 
     [PatchPrefix]
-    public static bool Prefix(MongoId sessionID, ItemEventRouterResponse output, ref ItemEventRouterResponse __result)
+    public static bool Prefix(MongoId sessionID, ItemEventRouterResponse output,
+        ref ValueTask<ItemEventRouterResponse> __result)
     {
         if (!VirtualStashService.IsVirtualStashEnabled(sessionID))
         {
@@ -44,7 +46,7 @@ public sealed class InventoryCallbacksSortInventoryPatch : AbstractPatch
 
         var response = output;
         VirtualStashService.AppendBlockedActionWarning(response);
-        __result = response;
+        __result = new ValueTask<ItemEventRouterResponse>(response);
         return false;
     }
 }
@@ -57,7 +59,8 @@ public sealed class InventoryCallbacksPinOrLockPatch : AbstractPatch
     }
 
     [PatchPrefix]
-    public static bool Prefix(MongoId sessionID, ItemEventRouterResponse output, ref ItemEventRouterResponse __result)
+    public static bool Prefix(MongoId sessionID, ItemEventRouterResponse output,
+        ref ValueTask<ItemEventRouterResponse> __result)
     {
         if (!VirtualStashService.IsVirtualStashEnabled(sessionID))
         {
@@ -66,7 +69,7 @@ public sealed class InventoryCallbacksPinOrLockPatch : AbstractPatch
 
         var response = output;
         VirtualStashService.AppendBlockedActionWarning(response);
-        __result = response;
+        __result = new ValueTask<ItemEventRouterResponse>(response);
         return false;
     }
 }
@@ -79,7 +82,8 @@ public sealed class InventoryCallbacksSetFavoriteItemPatch : AbstractPatch
     }
 
     [PatchPrefix]
-    public static bool Prefix(MongoId sessionID, ItemEventRouterResponse output, ref ItemEventRouterResponse __result)
+    public static bool Prefix(MongoId sessionID, ItemEventRouterResponse output,
+        ref ValueTask<ItemEventRouterResponse> __result)
     {
         if (!VirtualStashService.IsVirtualStashEnabled(sessionID))
         {
@@ -88,7 +92,7 @@ public sealed class InventoryCallbacksSetFavoriteItemPatch : AbstractPatch
 
         var response = output;
         VirtualStashService.AppendBlockedActionWarning(response);
-        __result = response;
+        __result = new ValueTask<ItemEventRouterResponse>(response);
         return false;
     }
 }

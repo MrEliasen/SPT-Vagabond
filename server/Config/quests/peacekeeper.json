@@ -70,7 +70,8 @@
           "value": 5000,
           "onlyFoundInRaid": false,
           "items": [
-            "5696686a4bdc2da3298b456a" // Dollars
+            "5696686a4bdc2da3298b456a"
+            // Dollars
           ]
         },
         {
@@ -80,7 +81,8 @@
           "value": 10,
           "onlyFoundInRaid": true,
           "items": [
-            "590c5f0d86f77413997acfab" // MRE ration pack
+            "590c5f0d86f77413997acfab"
+            // MRE ration pack
           ]
         },
         {
@@ -90,7 +92,8 @@
           "value": 10,
           "onlyFoundInRaid": true,
           "categories": [
-            "543be5cb4bdc2deb348b4568" // AmmoBox
+            "543be5cb4bdc2deb348b4568"
+            // AmmoBox
           ],
           "caliber": "Caliber556x45NATO"
         },
@@ -104,7 +107,8 @@
           "maxDurability": 100,
           // Any weapon
           "categories": [
-            "5422acb9af1c889c16000029" // Weapon
+            "5422acb9af1c889c16000029"
+            // Weapon
           ],
           // matching the 556x45 caliber
           "caliber": "Caliber556x45NATO"
