@@ -65,10 +65,7 @@ internal static class VagabondService
 
     public static void PersistProfileIfPossible(MongoId sessionId)
     {
-        // prevent saving if virtual stash is enabled, to avoid overwriting player profile with incorrect stash data.
-        // it could still happen elsewhere, like if spt saves somewhere internally right when we have a virtual stash loaded up..
-        // not sure what I can do then..
-        if (VirtualStashService.IsStashActive(sessionId))
+        if (VirtualStashService.CurrentFlowOwnsGate(sessionId))
         {
             return;
         }
@@ -81,7 +78,17 @@ internal static class VagabondService
                 return;
             }
 
-            server.SaveProfileAsync(sessionId);
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await server.SaveProfileAsync(sessionId).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    VagabondLogger.Error($"PersistProfileIfPossible failed: {ex}");
+                }
+            });
         }
         catch (Exception ex)
         {

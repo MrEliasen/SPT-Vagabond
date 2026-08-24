@@ -18,6 +18,8 @@ using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Models.Spt.Tables;
+using SPTarkov.Server.Core.Utils;
+using SPTarkov.Server.Core.Utils.Cloners;
 using Vagabond.Common;
 using Vagabond.Common.Api;
 using Vagabond.Server.Config;
@@ -85,6 +87,7 @@ public sealed class VagabondLoader : IOnLoad
         new Patches.QuestCallbacksCompleteQuestPatch().Enable();
         new Patches.QuestControllerGetClientQuestsPatch().Enable();
         new Patches.ItemEventRouterHandleEventsPatch().Enable();
+        new Patches.SaveProfilePatch().Enable();
         new Patches.TradeHelperBuyItemPatch().Enable();
         new Patches.TradeHelperSellItemPatch().Enable();
         new Patches.PaymentServicePayMoneyPatch().Enable();
@@ -118,6 +121,8 @@ public sealed class VagabondDbLoader : IOnLoad
     private readonly LocationController _locationController;
     private readonly CustomQuestService _customQuestService;
     private readonly LocaleService _localeService;
+    private readonly JsonUtil _jsonUtil;
+    private readonly ICloner _cloner;
 
     private readonly ISptLogger<VagabondDbLoader> _logger;
 
@@ -134,6 +139,8 @@ public sealed class VagabondDbLoader : IOnLoad
         LocationController locationController,
         CustomQuestService customQuestService,
         LocaleService localeService,
+        JsonUtil jsonUtil,
+        ICloner cloner,
         ISptLogger<VagabondDbLoader> logger)
     {
         _services = services;
@@ -149,6 +156,8 @@ public sealed class VagabondDbLoader : IOnLoad
         _templateTable = templateTable;
         _localeTable = localeTable;
         _localeService = localeService;
+        _jsonUtil = jsonUtil;
+        _cloner = cloner;
     }
 
     public Task OnLoadAsync(CancellationToken cancellationToken)
@@ -165,6 +174,8 @@ public sealed class VagabondDbLoader : IOnLoad
         ReflectionUtil.Register(_localeTable);
         ReflectionUtil.Register(_customQuestService);
         ReflectionUtil.Register(_localeService);
+        ReflectionUtil.Register(_jsonUtil);
+        ReflectionUtil.Register(_cloner);
         ExfilService.Apply(_locationTable);
 
         if (FikaAdapter.Init(_services))
