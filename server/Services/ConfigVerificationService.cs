@@ -116,7 +116,7 @@ internal static class ConfigVerificationService
         }
 
         VagabondLogger.Critical(
-            $"CONFIG PROBLEMS: {skipped} config row(s) skipped, {dropped} entr(y/ies) dropped. " +
+            $"CONFIG PROBLEMS: {skipped} config row(s) skipped, {dropped} entry/entries dropped. " +
             "Vagabond is running with the remaining valid entries. See the CONFIG lines above for the " +
             "file, row and value at fault.");
     }
