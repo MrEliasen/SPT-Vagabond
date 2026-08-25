@@ -7,6 +7,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using Comfort.Common;
 using EFT;
+using EFT.Communications;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Vagabond.Client.Patches;
@@ -63,8 +64,7 @@ public class Vagabond : BaseUnityPlugin
         new KeepFirStatusPatch().Enable();
 
         TryEnableAbpsCompatibilityPatches();
-
-        new LocalGameStopPatch().Enable();
+        
         new MenuShowPatch().Enable();
 
         if (IsHeadless())
@@ -131,6 +131,9 @@ public class Vagabond : BaseUnityPlugin
             return;
         }
 
+        ActiveHealthControllerPatch.UpdateFallDamageArming();
+        ExfilService.ResolvePendingSpawnOverlapSuppression();
+
         if (_hideoutPlacementArmed && Time.realtimeSinceStartup > _hideoutPlacementArmExpiresAt)
         {
             _hideoutPlacementArmed = false;
@@ -161,7 +164,7 @@ public class Vagabond : BaseUnityPlugin
     {
         if (_hideoutPlacementLoading)
         {
-            NotificationManagerClass.DisplayWarningNotification("Hideout placement request already in progress.");
+            NotificationManager.DisplayWarningNotification("Hideout placement request already in progress.");
             return;
         }
 
@@ -169,14 +172,14 @@ public class Vagabond : BaseUnityPlugin
         {
             if (!TryGetCurrentSnapshot(out _))
             {
-                NotificationManagerClass.DisplayWarningNotification("You must be in raid.");
+                NotificationManager.DisplayWarningNotification("You must be in raid.");
                 return;
             }
 
             _hideoutPlacementArmed = true;
             _hideoutPlacementArmExpiresAt = Time.realtimeSinceStartup + 10f;
 
-            NotificationManagerClass.DisplayWarningNotification(
+            NotificationManager.DisplayWarningNotification(
                 "Press the hotkey again within 10 seconds to place your hideout at your current position."
             );
             return;
@@ -192,7 +195,7 @@ public class Vagabond : BaseUnityPlugin
         {
             if (!TryGetCurrentSnapshot(out var snapshot))
             {
-                NotificationManagerClass.DisplayWarningNotification("You must be in raid.");
+                NotificationManager.DisplayWarningNotification("You must be in raid.");
                 return;
             }
 
@@ -209,16 +212,16 @@ public class Vagabond : BaseUnityPlugin
 
             if (!resp.Success)
             {
-                NotificationManagerClass.DisplayWarningNotification(resp.Message);
+                NotificationManager.DisplayWarningNotification(resp.Message);
                 return;
             }
 
-            NotificationManagerClass.DisplayMessageNotification(resp.Message);
+            NotificationManager.DisplayMessageNotification(resp.Message);
         }
         catch (Exception ex)
         {
             LogError($"Establish hideout request failed: {ex}");
-            NotificationManagerClass.DisplayWarningNotification("Establish hideout request failed.");
+            NotificationManager.DisplayWarningNotification("Establish hideout request failed.");
         }
         finally
         {
@@ -240,12 +243,13 @@ public class Vagabond : BaseUnityPlugin
 
             var pos = player.Position;
             var yaw = player.Transform.eulerAngles.y;
-            var csharpLine = string.Format(
+            var csharpLine = string.Join(
+                Environment.NewLine,
                 "{",
                 $"    \"x\": {pos.x:0.###},",
                 $"    \"y\": {pos.y:0.###},",
                 $"    \"z\": {pos.z:0.###},",
-                $"    \"rotationY\": {yaw:0.###},",
+                $"    \"rotationY\": {yaw:0.###}",
                 "},"
             );
             File.AppendAllText(_locationDumpPath, csharpLine + Environment.NewLine);

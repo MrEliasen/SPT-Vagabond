@@ -1,12 +1,12 @@
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Helpers.Profile;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Eft.Inventory;
 using SPTarkov.Server.Core.Models.Eft.Profile;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Servers;
-using SPTarkov.Server.Core.Services;
 using Vagabond.Common.Data;
 using Vagabond.Server.Config;
 using Vagabond.Common.Enums;
@@ -33,21 +33,27 @@ internal static class VagabondService
             return;
         }
 
-        var state = StateService.GetState(sessionId);
-        state.ResetProfile = false;
-
         RaidRuntimeState.Left(sessionId);
+
+        using var gate = VirtualStashService.AcquireGateScope(sessionId);
+
         VirtualStashService.ClearAllTraderStashes(sessionId);
         WipeItems(sessionId, pmc, true, true, true);
 
-        state.CurrentMap = VagabondConfig.Config.StartRaid;
-        state.LastExit = VagabondConfig.Config.StartExfilIdentifier;
-        state.TransitState = null;
-        ExfilService.RemoveHideout(state.HideoutState);
-        state.HideoutState = null;
-        state.CanPlaceHideout = true;
-        HideoutService.UpdateTraderAccess(pmc, state);
-        StateService.SaveState(sessionId, state);
+        StateService.WithState(sessionId, state =>
+        {
+            state.ResetProfile = false;
+            var (startRaid, startExfil) = VagabondConfig.GetStartLocation();
+            state.CurrentMap = startRaid;
+            state.LastExit = startExfil;
+            state.TransitState = null;
+            ExfilService.RemoveHideout(state.HideoutState);
+            state.HideoutState = null;
+            state.CanPlaceHideout = true;
+            HideoutService.UpdateTraderAccess(pmc, state);
+            StateService.SaveState(sessionId, state);
+        });
+
         using var stashState = VirtualStashService.OpenStash(sessionId, pmc);
         AddMoney(sessionId, pmc);
     }
@@ -65,10 +71,7 @@ internal static class VagabondService
 
     public static void PersistProfileIfPossible(MongoId sessionId)
     {
-        // prevent saving if virtual stash is enabled, to avoid overwriting player profile with incorrect stash data.
-        // it could still happen elsewhere, like if spt saves somewhere internally right when we have a virtual stash loaded up..
-        // not sure what I can do then..
-        if (VirtualStashService.IsStashActive(sessionId))
+        if (VirtualStashService.CurrentFlowOwnsGate(sessionId))
         {
             return;
         }
@@ -81,7 +84,20 @@ internal static class VagabondService
                 return;
             }
 
-            server.SaveProfileAsync(sessionId);
+            using (ExecutionContext.SuppressFlow())
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await server.SaveProfileAsync(sessionId).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        VagabondLogger.Error($"PersistProfileIfPossible failed: {ex}");
+                    }
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -211,6 +227,24 @@ internal static class VagabondService
         }
     }
 
+    public static bool IsHeadlessSession(MongoId sessionId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                return false;
+            }
+
+            var pmc = GetPmcProfile(sessionId);
+            return pmc?.ProfileInfo?.Username?.StartsWith("headless_") ?? false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
 
     public static void AddMoney(MongoId sessionId, PmcData pmcData)
     {
@@ -247,6 +281,21 @@ internal static class VagabondService
         }
     }
 
+    public static string GetGroundZeroMapIdForSession(MongoId sessionId)
+    {
+        var hostSessionId = FikaAdapter.GetMatchHostSessionId(sessionId);
+        try
+        {
+            var lvl = GetPmcProfile(hostSessionId)?.CharacterData?.PmcData?.Info?.Level ?? 1;
+            return GetGroundZeroMapIdForLevel(lvl);
+        }
+        catch (Exception)
+        {
+            var lvl = GetPmcProfile(sessionId)?.CharacterData?.PmcData?.Info?.Level ?? 1;
+            return GetGroundZeroMapIdForLevel(lvl);
+        }
+    }
+
     public static string GetGroundZeroMapIdForLevel(int playerLevel)
     {
         if (VagabondConfig.Config.ForceGroundZeroHigh)
@@ -254,8 +303,8 @@ internal static class VagabondService
             return "Sandbox_high";
         }
 
-        var db = ReflectionUtil.GetService<DatabaseService>();
-        var cap = db?.GetLocations().Sandbox.Base.RequiredPlayerLevelMax ?? 20;
+        var locationTable = ReflectionUtil.GetService<LocationTable>();
+        var cap = locationTable?.Sandbox.Base.RequiredPlayerLevelMax ?? 20;
         return playerLevel > cap ? "Sandbox_high" : "Sandbox";
     }
 
@@ -300,12 +349,10 @@ internal static class VagabondService
             }
         }
 
-        // GroundZero fix
         var effective = transitMap != RaidLocation.Nil ? transitMap : currentMap;
         if (effective == RaidLocation.GroundZero)
         {
-            var lvl = GetPmcProfile(sessionId)?.CharacterData?.PmcData?.Info?.Level ?? 1;
-            return GetGroundZeroMapIdForLevel(lvl);
+            return GetGroundZeroMapIdForSession(sessionId);
         }
 
         return allowedMapIds.First();

@@ -69,7 +69,8 @@
           "value": 8000,
           "onlyFoundInRaid": false,
           "items": [
-            "569668774bdc2da2298b4568" // Euros
+            "569668774bdc2da2298b4568"
+            // Euros
           ]
         },
         {
@@ -79,20 +80,34 @@
           "value": 6,
           "onlyFoundInRaid": true,
           "items": [
-            "59faf7ca86f7740dbe19f6c2", // Roler Submariner gold wristwatch
-            "5d235a5986f77443f6329bc6", // Gold skull ring
-            "62a09cfe4f842e1bd12da3e4", // Golden egg
-            "5734758f24597738025ee253", // Golden neck chain
-            "5bc9bc53d4351e00367fbcee", // Golden rooster figurine
-            "590de71386f774347051a052", // Antique teapot
-            "590de7e986f7741b096e5f32", // Antique vase
-            "5bc9c049d4351e44f824d360", // Battered antique book
-            "59e3639286f7741777737013", // Bronze lion figurine
-            "59e3658a86f7741776641ac4", // Cat figurine
-            "59e3647686f774176a362507", // Wooden clock
-            "5e54f62086f774219b0f1937", // Raven figurine
-            "62a091170b9d3c46de5b6cf2", // Axel parrot figurine
-            "5f745ee30acaeb0d490d8c5b"  // Veritas guitar pick
+            "59faf7ca86f7740dbe19f6c2",
+            // Roler Submariner gold wristwatch
+            "5d235a5986f77443f6329bc6",
+            // Gold skull ring
+            "62a09cfe4f842e1bd12da3e4",
+            // Golden egg
+            "5734758f24597738025ee253",
+            // Golden neck chain
+            "5bc9bc53d4351e00367fbcee",
+            // Golden rooster figurine
+            "590de71386f774347051a052",
+            // Antique teapot
+            "590de7e986f7741b096e5f32",
+            // Antique vase
+            "5bc9c049d4351e44f824d360",
+            // Battered antique book
+            "59e3639286f7741777737013",
+            // Bronze lion figurine
+            "59e3658a86f7741776641ac4",
+            // Cat figurine
+            "59e3647686f774176a362507",
+            // Wooden clock
+            "5e54f62086f774219b0f1937",
+            // Raven figurine
+            "62a091170b9d3c46de5b6cf2",
+            // Axel parrot figurine
+            "5f745ee30acaeb0d490d8c5b"
+            // Veritas guitar pick
           ]
         },
         {
@@ -102,13 +117,20 @@
           "value": 4,
           "onlyFoundInRaid": true,
           "items": [
-            "590c645c86f77412b01304d9", // Diary
-            "5c12613b86f7743bbe2c3f76", // Intelligence folder
-            "62a0a16d0b9d3c46de5b6e97", // Military flash drive
-            "590c621186f774138d11ea29", // Secure Flash drive
-            "61bf7c024770ee6f9c6b8b53", // Secure magnetic tape cassette
-            "590c651286f7741e566b6461", // Slim diary
-            "6389c8c5dbfd5e4b95197e6b"  // TerraGroup Blue Folders materials
+            "590c645c86f77412b01304d9",
+            // Diary
+            "5c12613b86f7743bbe2c3f76",
+            // Intelligence folder
+            "62a0a16d0b9d3c46de5b6e97",
+            // Military flash drive
+            "590c621186f774138d11ea29",
+            // Secure Flash drive
+            "61bf7c024770ee6f9c6b8b53",
+            // Secure magnetic tape cassette
+            "590c651286f7741e566b6461",
+            // Slim diary
+            "6389c8c5dbfd5e4b95197e6b"
+            // TerraGroup Blue Folders materials
           ]
         }
       ],

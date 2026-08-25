@@ -34,14 +34,16 @@ public static class LootStreakService
             return 1.0;
         }
 
-        var state = StateService.GetState(sessionId);
-        if (state.LastExtractMap != GetStreakMapName(location) || state.ConsecutiveExtractsSameMap <= 0)
+        return StateService.WithState(sessionId, state =>
         {
-            return 1.0;
-        }
+            if (state.LastExtractMap != GetStreakMapName(location) || state.ConsecutiveExtractsSameMap <= 0)
+            {
+                return 1.0;
+            }
 
-        return Math.Max(VagabondConfig.Config.ConsecutiveMapLootRetentionMin,
-            Math.Pow(VagabondConfig.Config.ConsecutiveMapLootRetentionRate, state.ConsecutiveExtractsSameMap));
+            return Math.Max(VagabondConfig.Config.ConsecutiveMapLootRetentionMin,
+                Math.Pow(VagabondConfig.Config.ConsecutiveMapLootRetentionRate, state.ConsecutiveExtractsSameMap));
+        });
     }
 
     public static void HandleSuccessfulExtract(VagabondSessionState state, string location)

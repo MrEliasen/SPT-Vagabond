@@ -1,11 +1,16 @@
 using System.Reflection;
 using System.Text.Json;
+using Vagabond.Common.Data;
+using Vagabond.Common.Enums;
 using Vagabond.Server.Services;
 
 namespace Vagabond.Server.Config;
 
 public sealed class VagabondConfig
 {
+    public const string DefaultStartRaid = "Streets";
+    public const string DefaultStartExfilIdentifier = "VGB_EXT_FENCE";
+
     public bool ResetOnDeath { get; set; }
     public bool DisableEvents { get; set; } = true;
     public int StartingRoubles { get; set; } = 175_000;
@@ -34,8 +39,31 @@ public sealed class VagabondConfig
     public double HealthOnDeath { get; set; }
     public bool ForceGroundZeroHigh { get; set; }
 
-    // internal
     public static VagabondConfig Config = new();
+    
+    public static (string Raid, string ExfilIdentifier) GetStartLocation()
+    {
+        var raid = VagabondLocations.NormaliseMapName(Config.StartRaid);
+        if (raid == RaidLocation.Nil)
+        {
+            VagabondLogger.Warning(
+                $"StartRaid `{Config.StartRaid}` is not a valid raid name; using {DefaultStartRaid} / " +
+                $"{DefaultStartExfilIdentifier} instead.");
+            return (DefaultStartRaid, DefaultStartExfilIdentifier);
+        }
+
+        if (!ExfilsConfig.Maps.TryGetValue(raid, out var entry) ||
+            !entry.Extracts.Exists(x =>
+                string.Equals(x.Identifier, Config.StartExfilIdentifier, StringComparison.OrdinalIgnoreCase)))
+        {
+            VagabondLogger.Warning(
+                $"StartExfilIdentifier `{Config.StartExfilIdentifier}` does not exist in {raid} exfils; " +
+                $"using {DefaultStartRaid} / {DefaultStartExfilIdentifier} instead.");
+            return (DefaultStartRaid, DefaultStartExfilIdentifier);
+        }
+
+        return (raid.ToString(), Config.StartExfilIdentifier);
+    }
 
     public static void Initialize()
     {
@@ -62,6 +90,7 @@ public sealed class VagabondConfig
             return JsonSerializer.Deserialize<VagabondConfig>(json, new JsonSerializerOptions
             {
                 ReadCommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true,
                 PropertyNameCaseInsensitive = true
             }) ?? throw new Exception($"failed to read {chosen}");
         }

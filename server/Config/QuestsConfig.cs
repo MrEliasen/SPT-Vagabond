@@ -92,13 +92,14 @@ public static class QuestsConfig
                 }
                 catch (Exception ex)
                 {
-                    VagabondLogger.Error($"quests config: failed to parse {path}: {ex}");
+                    ConfigVerificationService.ReportSkippedRow($"quests/{Path.GetFileName(path)}", 0, ex.Message);
                     continue;
                 }
 
                 if (entry?.NewQuest == null)
                 {
-                    VagabondLogger.Warning($"quests config: {Path.GetFileName(path)} has no newQuest, skipping.");
+                    ConfigVerificationService.ReportSkippedRow($"quests/{Path.GetFileName(path)}", 0,
+                        "file has no newQuest.");
                     continue;
                 }
 

@@ -4,7 +4,7 @@ using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Eft.Match;
 using SPTarkov.Server.Core.Models.Eft.Profile;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Services.InRaid;
 using Vagabond.Common.Data;
 using Vagabond.Common.Enums;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
@@ -45,11 +45,10 @@ public sealed class RaidEndPatch : AbstractPatch
 
         if (!isDead && VagabondService.ShouldApplyVagabondRules(sessionId))
         {
-            var state = StateService.GetState(sessionId);
-            if (state.VagabondModeEnabled && state.RaidFirItems?.Count > 0)
-            {
-                __state = new HashSet<string>(state.RaidFirItems);
-            }
+            __state = StateService.WithState(sessionId, state =>
+                state.VagabondModeEnabled && state.RaidFirItems?.Count > 0
+                    ? new HashSet<string>(state.RaidFirItems)
+                    : null);
         }
 
         HandleRaidEnd(sessionId, fullServerProfile, isDead, isTransfer, request, locationName);
@@ -66,98 +65,104 @@ public sealed class RaidEndPatch : AbstractPatch
                 return;
             }
 
-            var state = StateService.GetState(sessionId);
-            if (!state.VagabondModeEnabled)
-            {
-                return;
-            }
-
-            if (isDead && VagabondConfig.Config.HealStatusEffectsOnDeath)
-            {
-                var bodyParts = fullServerProfile.CharacterData?.PmcData?.Health?.BodyParts;
-                if (bodyParts != null)
-                {
-                    foreach (var part in bodyParts.Values)
-                    {
-                        part.Effects?.Clear();
-                    }
-                }
-            }
-
-            if (isDead && VagabondConfig.Config.HealthOnDeath > 0)
-            {
-                var bodyParts = fullServerProfile.CharacterData?.PmcData?.Health?.BodyParts;
-                if (bodyParts != null)
-                {
-                    foreach (var part in bodyParts.Values)
-                    {
-                        if (part.Health?.Maximum == null)
-                        {
-                            continue;
-                        }
-
-                        if (part.Health?.Minimum == null)
-                        {
-                            continue;
-                        }
-
-                        part.Health!.Current =
-                            Math.Clamp(part.Health.Maximum.Value * VagabondConfig.Config.HealthOnDeath,
-                                part.Health.Minimum.Value, part.Health.Maximum.Value);
-                    }
-                }
-            }
-
-            var items = fullServerProfile.CharacterData?.PmcData?.Inventory?.Items;
-            if (items == null)
-            {
-                return;
-            }
-
-            if (__state?.Count > 0 && !isDead)
-            {
-                foreach (var item in items)
-                {
-                    if (__state.Contains(item.Id))
-                    {
-                        item.Upd ??= new Upd();
-                        item.Upd.SpawnedInSession = true;
-                    }
-                }
-            }
-
-            var isOwnHideout = !string.IsNullOrEmpty(state.HideoutState?.Id) &&
-                               state.LastExit == $"{HideoutService.HideoutIdPrefix}{state.HideoutState?.Id}";
-            var isSharedHideout =
-                (state.LastExit.IndexOf(HideoutService.HideoutIdPrefix,
-                    StringComparison.OrdinalIgnoreCase) == 0) && VagabondConfig.Config.ShareHideoutExits;
-
-            if ((isTransfer || (!isOwnHideout && !isSharedHideout)) && !isDead)
-            {
-                var equipmentRootId = fullServerProfile.CharacterData?.PmcData?.Inventory?.Equipment?.ToString();
-                var equippedIds = GetEquipmentIds(items, equipmentRootId);
-                var firIds = new HashSet<string>();
-                foreach (var item in items)
-                {
-                    if (item.Upd?.SpawnedInSession == true && equippedIds.Contains(item.Id))
-                    {
-                        firIds.Add(item.Id);
-                    }
-                }
-
-                state.RaidFirItems = firIds.Count > 0 ? firIds : null;
-            }
-            else
-            {
-                state.RaidFirItems = null;
-            }
-
-            StateService.SaveState(sessionId, state);
+            StateService.WithState(sessionId, state =>
+                HandleFirItems(sessionId, fullServerProfile, isDead, isTransfer, __state, state));
         }
         catch (Exception ex)
         {
             VagabondLogger.Error($"RaidEndPatch failed to handle fir items: {ex}");
         }
+    }
+
+    private static void HandleFirItems(MongoId sessionId, SptProfile fullServerProfile, bool isDead, bool isTransfer,
+        HashSet<string>? __state, VagabondSessionState state)
+    {
+        if (!state.VagabondModeEnabled)
+        {
+            return;
+        }
+
+        if (isDead && VagabondConfig.Config.HealStatusEffectsOnDeath)
+        {
+            var bodyParts = fullServerProfile.CharacterData?.PmcData?.Health?.BodyParts;
+            if (bodyParts != null)
+            {
+                foreach (var part in bodyParts.Values)
+                {
+                    part.Effects?.Clear();
+                }
+            }
+        }
+
+        if (isDead && VagabondConfig.Config.HealthOnDeath > 0)
+        {
+            var bodyParts = fullServerProfile.CharacterData?.PmcData?.Health?.BodyParts;
+            if (bodyParts != null)
+            {
+                foreach (var part in bodyParts.Values)
+                {
+                    if (part.Health?.Maximum == null)
+                    {
+                        continue;
+                    }
+
+                    if (part.Health?.Minimum == null)
+                    {
+                        continue;
+                    }
+
+                    part.Health!.Current =
+                        Math.Clamp(part.Health.Maximum.Value * VagabondConfig.Config.HealthOnDeath,
+                            part.Health.Minimum.Value, part.Health.Maximum.Value);
+                }
+            }
+        }
+
+        var items = fullServerProfile.CharacterData?.PmcData?.Inventory?.Items;
+        if (items == null)
+        {
+            return;
+        }
+
+        if (__state?.Count > 0 && !isDead)
+        {
+            foreach (var item in items)
+            {
+                if (__state.Contains(item.Id))
+                {
+                    item.Upd ??= new Upd();
+                    item.Upd.SpawnedInSession = true;
+                }
+            }
+        }
+
+        var isOwnHideout = !string.IsNullOrEmpty(state.HideoutState?.Id) &&
+                           state.LastExit == $"{HideoutService.HideoutIdPrefix}{state.HideoutState?.Id}";
+        var isSharedHideout =
+            (state.LastExit.IndexOf(HideoutService.HideoutIdPrefix,
+                StringComparison.OrdinalIgnoreCase) == 0) && VagabondConfig.Config.ShareHideoutExits;
+
+        if ((isTransfer || (!isOwnHideout && !isSharedHideout)) && !isDead)
+        {
+            var equipmentRootId = fullServerProfile.CharacterData?.PmcData?.Inventory?.Equipment?.ToString();
+            var equippedIds = GetEquipmentIds(items, equipmentRootId);
+            var firIds = new HashSet<string>();
+            foreach (var item in items)
+            {
+                if (item.Upd?.SpawnedInSession == true && equippedIds.Contains(item.Id))
+                {
+                    firIds.Add(item.Id);
+                }
+            }
+
+            state.RaidFirItems = firIds.Count > 0 ? firIds : null;
+        }
+        else
+        {
+            state.RaidFirItems = null;
+        }
+
+        StateService.SaveState(sessionId, state);
     }
 
     public static void HandleRaidEnd(MongoId sessionId, SptProfile profile, bool isDead, bool isTransfer,
@@ -168,7 +173,13 @@ public sealed class RaidEndPatch : AbstractPatch
             return;
         }
 
-        var state = StateService.GetState(sessionId);
+        StateService.WithState(sessionId, state =>
+            HandleRaidEndLocked(sessionId, profile, isDead, isTransfer, request, locationName, state));
+    }
+
+    private static void HandleRaidEndLocked(MongoId sessionId, SptProfile profile, bool isDead, bool isTransfer,
+        EndLocalRaidRequestData request, string locationName, VagabondSessionState state)
+    {
         if (!state.VagabondModeEnabled)
         {
             return;
@@ -191,6 +202,7 @@ public sealed class RaidEndPatch : AbstractPatch
                     {
                         state.CurrentMap = VagabondLocations.NormaliseMapName(state.HideoutState?.Map).ToString();
                         state.LastExit = $"{HideoutService.HideoutIdPrefix}{state.HideoutState?.Id}";
+                        state.TransitState = null;
                     }
                     else
                     {
@@ -226,6 +238,7 @@ public sealed class RaidEndPatch : AbstractPatch
                     {
                         state.CurrentMap = raidLoc.ToString();
                         state.LastExit = VagabondConfig.Config.OnDeathGoToExfilIdentifier;
+                        state.TransitState = null;
                     }
 
                     break;
@@ -349,14 +362,10 @@ public sealed class RaidEndPatch : AbstractPatch
         // its a hideout, we need the ID
         if (exitName.IndexOf(HideoutService.HideoutNamePrefix, StringComparison.OrdinalIgnoreCase) == 0)
         {
-            return ExfilService.HideoutExfils[raid][mapName].FirstOrDefault(x =>
-                string.Equals(x.DisplayName, exitName, StringComparison.OrdinalIgnoreCase))?.Identifier ?? string.Empty;
+            return ExfilService.FindHideoutExfilByDisplayName(raid, mapName, exitName)?.Identifier ?? string.Empty;
         }
 
-        var match = ExfilService.CustomExfils[raid][mapName].FirstOrDefault(x =>
-            string.Equals(x.Identifier, exitName, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(x.DisplayName, exitName, StringComparison.OrdinalIgnoreCase));
-
+        var match = ExfilService.FindCustomExfil(raid, mapName, exitName);
         return match?.Identifier ?? exitName;
     }
 }

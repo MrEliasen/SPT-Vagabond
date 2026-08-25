@@ -1,8 +1,9 @@
 ﻿using System.Text.Json;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
-using SPTarkov.Server.Core.Services;
-using SPTarkov.Server.Core.Services.Mod;
+using SPTarkov.Server.Core.Models.Enums;
+using SPTarkov.Server.Core.Models.Spt.Tables;
+using SPTarkov.Server.Core.Services.Modding.Custom;
 using SPTarkov.Server.Core.Utils.Json;
 using Vagabond.Common.Data;
 using Vagabond.Common.Definitions;
@@ -14,14 +15,19 @@ public static class QuestService
 {
     public static Dictionary<string, List<string>> BuildExfilList(VagabondSessionState state)
     {
+        return BuildExfilList(state.QuestExfils);
+    }
+
+    public static Dictionary<string, List<string>> BuildExfilList(IReadOnlyCollection<string> questIds)
+    {
         Dictionary<string, List<string>> exfilList = new();
 
-        if (state.QuestExfils.Count == 0)
+        if (questIds.Count == 0)
         {
             return exfilList;
         }
 
-        foreach (var quests in state.QuestExfils)
+        foreach (var quests in questIds)
         {
             ExfilQuests.List.TryGetValue(quests, out var list);
             if (list == null)
@@ -66,9 +72,11 @@ public static class QuestService
             return;
         }
 
-        var databaseService = ReflectionUtil.GetService<DatabaseService>();
-        var supportedLocales = databaseService?.GetLocales().Global.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase)
+        var localeTable = ReflectionUtil.GetService<LocaleTable>();
+        var supportedLocales = localeTable?.Global.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase)
                                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "en" };
+
+        var templateTable = ReflectionUtil.GetService<TemplateTable>();
 
         foreach (var quest in quests)
         {
@@ -81,9 +89,9 @@ public static class QuestService
                 quest.Locales.TryAdd(lang, defaultLocale);
             }
 
-            if (databaseService != null)
+            if (templateTable != null)
             {
-                ExpandHandoverItems(quest.NewQuest, databaseService);
+                ExpandHandoverItems(quest.NewQuest, templateTable);
             }
 
             var result = customQuestService.CreateQuest(quest);
@@ -97,14 +105,9 @@ public static class QuestService
         }
     }
 
-    private static void ExpandHandoverItems(Quest quest, DatabaseService databaseService)
+    private static void ExpandHandoverItems(Quest quest, TemplateTable templateTable)
     {
         var conditions = quest.Conditions;
-        if (conditions == null)
-        {
-            return;
-        }
-
         foreach (var list in new[] { conditions.AvailableForStart, conditions.AvailableForFinish })
         {
             if (list == null)
@@ -114,12 +117,12 @@ public static class QuestService
 
             foreach (var condition in list)
             {
-                ExpandCondition(condition, databaseService);
+                ExpandCondition(condition, templateTable);
             }
         }
     }
 
-    private static void ExpandCondition(QuestCondition condition, DatabaseService databaseService)
+    private static void ExpandCondition(QuestCondition condition, TemplateTable templateTable)
     {
         var ext = condition.ExtensionData;
         if (ext == null)
@@ -161,12 +164,12 @@ public static class QuestService
             var caliber = TryReadString(ext, "caliber", out var c) ? c : null;
             var minBackpackSize = TryReadInt(ext, "minBackpackSize", out var size) ? size : (int?)null;
             var categorySet = new HashSet<string>(categories, StringComparer.Ordinal);
-            var items = databaseService.GetItems();
+            var items = templateTable.Items;
 
             var matches = new List<string>();
             foreach (var item in items.Values)
             {
-                if (item?.Properties == null || item.Type != "Item")
+                if (item.Properties == null || item.Type != "Item")
                 {
                     continue;
                 }
@@ -227,7 +230,7 @@ public static class QuestService
                 return true;
             }
 
-            if (!items.TryGetValue(current, out var parent) || parent == null)
+            if (!items.TryGetValue(current, out var parent))
             {
                 break;
             }

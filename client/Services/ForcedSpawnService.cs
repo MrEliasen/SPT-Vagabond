@@ -92,7 +92,7 @@ internal static class ForcedSpawnService
         return radius > 0f && Vector3.Distance(spawnPoint.Position, mainPlayerPosition) < radius;
     }
 
-    private static float GetSafetyRadius()
+    internal static float GetSafetyRadius()
     {
         var locationId = Singleton<GameWorld>.Instance?.LocationId;
         var raidLocation = VagabondLocations.NormaliseMapName(locationId);

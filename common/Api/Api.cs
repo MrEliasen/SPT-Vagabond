@@ -4,8 +4,8 @@ using Vagabond.Common.Enums;
 namespace Vagabond.Common.Api;
 
 /// <summary>
-/// Vagabond initialises this during the PreSptModLoader phase.
-/// Calling the API before Vagabond's PreSptModLoader phases has run will throw and error.
+/// Vagabond initialises this during its OnLoadOrder.Preload load phase.
+/// Calling the API before Vagabond's Preload phase has run will throw an error.
 /// </summary>
 public static class Api
 {
@@ -99,5 +99,5 @@ public static class Api
 
     private static T Required<T>(T? impl) where T : class
         => impl ?? throw new InvalidOperationException(
-            "Vagabond is not initialised yet. You must wait until after Vagabond's PreSptModLoader phase.");
+            "Vagabond is not initialised yet. You must wait until after Vagabond's OnLoadOrder.Preload phase.");
 }

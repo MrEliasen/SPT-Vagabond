@@ -14,6 +14,8 @@ public static class ExfilService
 {
     internal static readonly HashSet<int> SuppressedCustomExtractPointIds = new();
 
+    internal static readonly List<ExfiltrationPoint> PendingSpawnOverlapPoints = new();
+
     public static bool ShouldSuppressSpawnOverlap(ExfiltrationPoint point, Player player)
     {
         if (point == null || player == null)
@@ -27,7 +29,32 @@ public static class ExfilService
             return false;
         }
 
-        return SuppressedCustomExtractPointIds.Contains(point.GetInstanceID());
+        return SuppressedCustomExtractPointIds.Contains(point.GetInstanceID())
+               || PendingSpawnOverlapPoints.Contains(point);
+    }
+
+    internal static void ResolvePendingSpawnOverlapSuppression()
+    {
+        if (PendingSpawnOverlapPoints.Count == 0)
+        {
+            return;
+        }
+
+        var mainPlayer = Singleton<GameWorld>.Instance?.MainPlayer;
+        if (mainPlayer == null)
+        {
+            return;
+        }
+
+        foreach (var point in PendingSpawnOverlapPoints)
+        {
+            if (point != null && IsPlayerInsidePointTrigger(mainPlayer, point))
+            {
+                SuppressedCustomExtractPointIds.Add(point.GetInstanceID());
+            }
+        }
+
+        PendingSpawnOverlapPoints.Clear();
     }
 
     public static bool ShouldSuppressSpawnOverlap(ExfiltrationPoint point, Collider collider)

@@ -1,5 +1,5 @@
 ﻿using SPTarkov.Server.Core.Models.Common;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Services.Commerce;
 
 namespace Vagabond.Server.Services;
 

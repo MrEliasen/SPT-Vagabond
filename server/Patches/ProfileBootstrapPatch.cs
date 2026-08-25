@@ -1,6 +1,7 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using SPTarkov.Reflection.Patching;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Helpers.Profile;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
@@ -11,46 +12,117 @@ namespace Vagabond.Server.Patches;
 
 public sealed class ProfileBootstrapPatch : AbstractPatch
 {
+    private static readonly ConditionalWeakTable<PmcData, AppliedMemo> AppliedMemos = new();
+
+    private sealed class AppliedMemo
+    {
+        public long StateVersion = -1;
+    }
+
     protected override MethodBase GetTargetMethod()
     {
         return typeof(ProfileHelper).GetMethod(nameof(ProfileHelper.GetPmcProfile))!;
     }
 
     [PatchPostfix]
-    public static void Postfix(MongoId sessionId, ref PmcData __result)
+    public static void Postfix(MongoId sessionId, ref PmcData? __result)
     {
         BootstrapProfile(sessionId, __result);
     }
 
-    public static void BootstrapProfile(MongoId sessionId, PmcData pmc)
+    public static void BootstrapProfile(MongoId sessionId, PmcData? pmc)
     {
         try
         {
+            if (pmc == null)
+            {
+                return;
+            }
+
+            if (AppliedMemos.TryGetValue(pmc, out var applied)
+                && Volatile.Read(ref applied.StateVersion) == StateService.GetStateVersion(sessionId))
+            {
+                return;
+            }
+
             if (!VagabondService.ShouldApplyVagabondRules(sessionId))
             {
                 return;
             }
 
-            var state = StateService.GetState(sessionId);
-            if (!state.VagabondModeEnabled)
+            var entryVersion = StateService.GetStateVersion(sessionId);
+
+            var resetPending = false;
+            var enabled = StateService.WithState(sessionId, state =>
+            {
+                if (!state.VagabondModeEnabled)
+                {
+                    return false;
+                }
+
+                MigrationService.MigrateProfile(sessionId, pmc, state);
+
+                if (state.ResetProfile && !VirtualStashService.CurrentFlowOwnsForeignGate(sessionId))
+                {
+                    resetPending = true;
+                    return true;
+                }
+
+                HideoutService.UpdateTraderAccess(pmc, state);
+                ApplyRaidFirItems(pmc, state);
+
+                if (!state.ResetProfile)
+                {
+                    Volatile.Write(ref AppliedMemos.GetOrCreateValue(pmc).StateVersion, entryVersion);
+                }
+
+                return true;
+            });
+
+            if (!enabled || !resetPending)
             {
                 return;
             }
 
-            MigrationService.MigrateProfile(sessionId, pmc, state);
-
-            if (state.ResetProfile)
+            var gate = VirtualStashService.TryAcquireGateScope(sessionId);
+            if (gate == null)
             {
-                state.ResetProfile = false;
-                StateService.SaveState(sessionId, state);
+                if (VirtualStashService.ShouldLogResetDeferral(sessionId))
+                {
+                    VagabondLogger.Warning(
+                        $"Deferring profile reset for {sessionId}: session gate still held; will retry.");
+                }
+
+                return;
+            }
+
+            try
+            {
+                var resetClaimed = StateService.WithState(sessionId, state =>
+                {
+                    if (!state.ResetProfile)
+                    {
+                        return false;
+                    }
+
+                    state.ResetProfile = false;
+                    StateService.SaveState(sessionId, state);
+                    return true;
+                });
+
+                if (!resetClaimed)
+                {
+                    return;
+                }
+
                 VirtualStashService.ClearAllTraderStashes(sessionId);
                 VagabondService.ResetProfile(sessionId, pmc);
-                VagabondService.PersistProfileIfPossible(sessionId);
-                return;
+            }
+            finally
+            {
+                gate.Dispose();
             }
 
-            HideoutService.UpdateTraderAccess(pmc, state);
-            ApplyRaidFirItems(pmc, state);
             VagabondService.PersistProfileIfPossible(sessionId);
         }
         catch (Exception ex)

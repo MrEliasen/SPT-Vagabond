@@ -50,7 +50,7 @@ public static class VagabondLocations
         ["5704e554d2720bac5b8b456e"] = "Shoreline",
         ["5714dc692459777137212e12"] = "TarkovStreets",
         ["5b0fc42d86f7744a585f9105"] = "laboratory",
-        ["6733700029c367a3d40b02af"] = "labyrinth",
+        ["6733700029c367a3d40b02af"] = "Labyrinth",
         ["5704e3c2d2720bac5b8b4567"] = "Woods",
     };
 
@@ -103,7 +103,7 @@ public static class VagabondLocations
         },
         [RaidLocation.Labyrinth] = new List<string>
         {
-            "labyrinth",
+            "Labyrinth",
         },
     };
 

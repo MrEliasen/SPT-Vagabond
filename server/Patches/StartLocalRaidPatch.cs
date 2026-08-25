@@ -1,9 +1,9 @@
-﻿using System.Reflection;
+using System.Reflection;
 using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Eft.Match;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Services.InRaid;
 using Vagabond.Common.Data;
 using Vagabond.Common.Enums;
 using Vagabond.Server.Data;
@@ -16,41 +16,53 @@ public sealed class StartLocalRaidPatch : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(LocationLifecycleService).GetMethod(nameof(LocationLifecycleService.StartLocalRaid))!;
+        return typeof(LocationLifecycleService).GetMethod(nameof(LocationLifecycleService.StartLocalRaidAsync))!;
     }
 
     [PatchPostfix]
     public static void Postfix(MongoId sessionId, StartLocalRaidRequestData request,
-        ref StartLocalRaidResponseData __result)
+        ref Task<StartLocalRaidResponseData> __result)
     {
+        __result = ApplyAsync(__result, sessionId, request);
+    }
+
+    private static async Task<StartLocalRaidResponseData> ApplyAsync(
+        Task<StartLocalRaidResponseData> originalResult, MongoId sessionId, StartLocalRaidRequestData request)
+    {
+        var response = await originalResult.ConfigureAwait(false);
+
         try
         {
             var serverOwnerSessionId = FikaAdapter.GetRaidOwnerSessionId(sessionId);
             if (!VagabondService.ShouldApplyVagabondRules(serverOwnerSessionId))
             {
-                return;
+                return response;
             }
 
-            var state = StateService.GetState(serverOwnerSessionId);
             var location = VagabondLocations.NormaliseMapName(request.Location);
 
             if (string.IsNullOrWhiteSpace(request.Location) || location == RaidLocation.Nil)
             {
-                return;
+                return response;
             }
 
-            var forcedSpawn = StaticMapTransitions.GetSpawnLocation(state, location);
-            if (forcedSpawn != null)
+            StateService.WithState(serverOwnerSessionId, state =>
             {
-                ApplyForcedSpawn(__result, request.Location, forcedSpawn);
-            }
+                var forcedSpawn = StaticMapTransitions.GetSpawnLocation(state, location);
+                if (forcedSpawn != null)
+                {
+                    ApplyForcedSpawn(response, request.Location, forcedSpawn, sessionId);
+                }
 
-            StateService.SaveState(serverOwnerSessionId, state);
+                StateService.SaveState(serverOwnerSessionId, state);
+            });
         }
         catch (Exception ex)
         {
             VagabondLogger.Error($"StartLocalRaidPatch failed: {ex}");
         }
+
+        return response;
     }
 
     private static SpawnPointParam? GetSpawnPointTemplate(IEnumerable<SpawnPointParam>? spawnPoints,
@@ -65,19 +77,20 @@ public sealed class StartLocalRaidPatch : AbstractPatch
                 sp.Position != null)
             .OrderBy(sp =>
             {
-                var dx = sp.Position!.X - point.X;
-                var dy = sp.Position!.Y - point.Y;
-                var dz = sp.Position!.Z - point.Z;
+                var dx = sp.Position!.Value.X - point.X;
+                var dy = sp.Position!.Value.Y - point.Y;
+                var dz = sp.Position!.Value.Z - point.Z;
                 return dx * dx + dy * dy + dz * dz;
             })
             .FirstOrDefault();
     }
 
     private static void ApplyForcedSpawn(StartLocalRaidResponseData response, string locationName,
-        ManualSpawnPoint point)
+        ManualSpawnPoint point, MongoId sessionId)
     {
-        var all = response.LocationLoot?.SpawnPointParams?.ToList();
-        if (all == null || all.Count == 0)
+        var shared = response.LocationLoot;
+        var all = shared?.SpawnPointParams?.ToList();
+        if (shared == null || all == null || all.Count == 0)
         {
             VagabondLogger.Error("No map spawn points found");
             return;
@@ -90,16 +103,11 @@ public sealed class StartLocalRaidPatch : AbstractPatch
             return;
         }
 
-        var forcedSpawnId = ForcedSpawnPointIds.Build(locationName, template.Id);
+        var forcedSpawnId = ForcedSpawnPointIds.Build(locationName, template.Id, sessionId.ToString());
         var forced = template with
         {
             Id = forcedSpawnId,
-            Position = new XYZ
-            {
-                X = point.X,
-                Y = point.Y,
-                Z = point.Z
-            },
+            Position = new Vector3((float)point.X, (float)point.Y, (float)point.Z),
             Rotation = point.Rotation
         };
 
@@ -108,7 +116,7 @@ public sealed class StartLocalRaidPatch : AbstractPatch
             .ToList();
 
         kept.Add(forced);
-        response.LocationLoot!.SpawnPointParams = kept;
+        response.LocationLoot = shared with { SpawnPointParams = kept };
 
         //VagabondLogger.Log($"Forced PMC player spawn applied. Original total: {all.Count}, new total: {kept.Count}, kept non-player/non-PMC entries: {kept.Count - 1}");
     }

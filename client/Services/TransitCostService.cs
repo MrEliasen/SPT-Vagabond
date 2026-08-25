@@ -7,8 +7,8 @@ namespace Vagabond.Client.Services;
 
 internal static class TransitCostService
 {
-    private static TraderControllerClass _controller;
-    private static StashItemClass _fakeStash;
+    private static ItemController _controller;
+    private static Stash _fakeStash;
 
     private static void EnsureSink()
     {
@@ -17,8 +17,8 @@ internal static class TransitCostService
             return;
         }
 
-        _fakeStash = Singleton<ItemFactoryClass>.Instance.CreateFakeStash(MongoID.Generate());
-        _controller = new TraderControllerClass(
+        _fakeStash = Singleton<ItemFactory>.Instance.CreateFakeStash(MongoID.Generate());
+        _controller = new ItemController(
             _fakeStash,
             "VagabondTransitCostSink",
             "VagabondTransitCostSink",
@@ -67,7 +67,7 @@ internal static class TransitCostService
             return false;
         }
 
-        var loc = ((StashItemClass)_controller.RootItem).Grid.FindLocationForItem(stack);
+        var loc = ((Stash)_controller.RootItem).Grid.FindLocationForItem(stack);
         if (loc == null)
         {
             error = "Fake stash is full";
@@ -78,12 +78,12 @@ internal static class TransitCostService
         if (stack.StackObjectsCount == price)
         {
             ic.TryRunNetworkTransaction(
-                InteractionsHandlerClass.Move(stack, loc, ic, true));
+                ItemManipulator.Move(stack, loc, ic, true));
         }
         else
         {
             ic.TryRunNetworkTransaction(
-                InteractionsHandlerClass.SplitExact(stack, price, loc, ic, ic, true));
+                ItemManipulator.SplitExact(stack, price, loc, ic, ic, true));
         }
 
         return true;

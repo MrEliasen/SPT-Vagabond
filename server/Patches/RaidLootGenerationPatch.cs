@@ -1,7 +1,7 @@
 using System.Reflection;
 using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.Models.Common;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Services.InRaid;
 using Vagabond.Server.Services;
 
 namespace Vagabond.Server.Patches;

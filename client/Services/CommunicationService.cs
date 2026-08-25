@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Vagabond.Common.Definitions;
+using Vagabond.Common.Enums;
 using Vagabond.Common.Models;
 
 namespace Vagabond.Client.Services;
@@ -15,7 +18,7 @@ public static class CommunicationService
                 Version = Vagabond.State.CustomExfilsCacheVersion,
             });
 
-            ApplyExfilState(resp);
+            ApplyExfilState(resp, applyToRaid: false);
         }
         catch (Exception ex)
         {
@@ -32,7 +35,7 @@ public static class CommunicationService
                 Version = Vagabond.State.CustomExfilsCacheVersion,
             });
 
-            ApplyExfilState(resp);
+            ApplyExfilState(resp, applyToRaid: true);
         }
         catch (Exception ex)
         {
@@ -44,7 +47,7 @@ public static class CommunicationService
         }
     }
 
-    private static void ApplyExfilState(SyncExfilResponse resp)
+    private static void ApplyExfilState(SyncExfilResponse resp, bool applyToRaid)
     {
         if (resp == null)
         {
@@ -57,8 +60,12 @@ public static class CommunicationService
         if (resp.CustomExfils != null)
         {
             //Vagabond.Log($"RefreshExfilState: updating exfils");
-            Vagabond.State.CustomExfils = resp.CustomExfils;
-            RaidService.UpdateCurrentRaidExfils();
+            Vagabond.State.CustomExfils = WithMapKeysCaseInsensitive(resp.CustomExfils);
+
+            if (applyToRaid)
+            {
+                RaidService.UpdateCurrentRaidExfils();
+            }
         }
     }
 
@@ -66,7 +73,9 @@ public static class CommunicationService
     {
         try
         {
-            var resp = await Networking.ApiClient.SyncVagabondState();
+            var request = BuildSyncStateRequest();
+            var resp = await Networking.ApiClient.SyncVagabondState(request);
+            _lastSentInRaid = request.InRaid;
             ApplyVagabondState(resp);
         }
         catch (Exception ex)
@@ -83,7 +92,9 @@ public static class CommunicationService
     {
         try
         {
-            var resp = Networking.ApiClient.SyncVagabondStateBlocking();
+            var request = BuildSyncStateRequest();
+            var resp = Networking.ApiClient.SyncVagabondStateBlocking(request);
+            _lastSentInRaid = request.InRaid;
             ApplyVagabondState(resp);
         }
         catch (Exception ex)
@@ -115,14 +126,27 @@ public static class CommunicationService
         //     }
         // }
 
-        Vagabond.State.CustomExfils = resp.CustomExfils;
-        Vagabond.State.QuestExfils = resp.QuestExfils;
-        Vagabond.State.RaidFirItems = resp.RaidFirItems;
+        if (resp.CustomExfils != null)
+        {
+            Vagabond.State.CustomExfils = WithMapKeysCaseInsensitive(resp.CustomExfils);
+        }
+
+        if (resp.QuestExfils != null)
+        {
+            Vagabond.State.QuestExfils =
+                new Dictionary<string, List<string>>(resp.QuestExfils, StringComparer.OrdinalIgnoreCase);
+        }
+
+        if (resp.RaidFirItems != null)
+        {
+            Vagabond.State.RaidFirItems = resp.RaidFirItems;
+        }
 
         if (!Vagabond.IsHeadless())
         {
             Vagabond.State.ResetOnDeath = resp.ResetOnDeath;
             Vagabond.State.WipeFirstRaid = resp.WipeFirstRaid;
+            Vagabond.State.VirtualStashes = resp.VirtualStashes;
             Vagabond.State.CurrentMap = resp.CurrentMap;
             Vagabond.State.LastRefreshUtc = DateTime.UtcNow;
             Vagabond.State.NewCharacter = resp.NewCharacter;
@@ -132,5 +156,34 @@ public static class CommunicationService
             Vagabond.State.LootStreakMultiplier = resp.LootStreakMultiplier;
             Vagabond.State.LootStreakCount = resp.LootStreakCount;
         }
+    }
+
+    private static bool? _lastSentInRaid;
+
+    public static bool HasUnsentInRaidStatus()
+    {
+        return _lastSentInRaid != RaidService.IsInRaid();
+    }
+
+    private static SyncStateRequest BuildSyncStateRequest()
+    {
+        return new SyncStateRequest
+        {
+            InRaid = RaidService.IsInRaid(),
+        };
+    }
+
+    private static Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>> WithMapKeysCaseInsensitive(
+        Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>> source)
+    {
+        var result = new Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>(source.Count);
+        foreach (var raid in source)
+        {
+            result[raid.Key] = raid.Value == null
+                ? new Dictionary<string, List<CustomExfil>>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, List<CustomExfil>>(raid.Value, StringComparer.OrdinalIgnoreCase);
+        }
+
+        return result;
     }
 }

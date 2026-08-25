@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Newtonsoft.Json;
 using SPT.Common.Http;
 using Vagabond.Common.Models;
@@ -7,9 +7,10 @@ namespace Vagabond.Client.Networking
 {
     internal static class ApiClient
     {
-        public static async Task<SyncStateResponse> SyncVagabondState()
+        public static async Task<SyncStateResponse> SyncVagabondState(SyncStateRequest body)
         {
-            string payload = await RequestHandler.GetJsonAsync("/vagabond/sync/state");
+            string payload =
+                await RequestHandler.PostJsonAsync("/vagabond/sync/state", JsonConvert.SerializeObject(body));
             return JsonConvert.DeserializeObject<SyncStateResponse>(payload);
         }
 
@@ -20,9 +21,10 @@ namespace Vagabond.Client.Networking
             return JsonConvert.DeserializeObject<SyncExfilResponse>(payload);
         }
 
-        public static SyncStateResponse SyncVagabondStateBlocking()
+        public static SyncStateResponse SyncVagabondStateBlocking(SyncStateRequest body)
         {
-            return JsonConvert.DeserializeObject<SyncStateResponse>(RequestHandler.GetJson("/vagabond/sync/state"));
+            return JsonConvert.DeserializeObject<SyncStateResponse>(
+                RequestHandler.PostJson("/vagabond/sync/state", JsonConvert.SerializeObject(body)));
         }
 
         public static SyncExfilResponse SyncExfilDataBlocking(GetExfilDataRequest body)

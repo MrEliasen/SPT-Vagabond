@@ -1,4 +1,4 @@
-﻿using SPTarkov.Server.Core.Models.Utils;
+﻿using SPTarkov.Common.Models.Logging;
 
 namespace Vagabond.Server.Services;
 
@@ -29,5 +29,15 @@ public class VagabondLogger
     public static void Success(string message)
     {
         _logger?.Success($"[Vagabond] {message}");
+    }
+
+    public static void Critical(string message)
+    {
+        _logger?.Critical($"[Vagabond] {message}");
+    }
+
+    public static void Debug(string message)
+    {
+        _logger?.Debug($"[Vagabond] {message}");
     }
 }

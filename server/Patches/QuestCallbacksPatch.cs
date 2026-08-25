@@ -18,19 +18,31 @@ public sealed class QuestCallbacksAcceptQuestPatch : AbstractPatch
     }
 
     [PatchPostfix]
-    public static void Postfix(MongoId sessionID, AcceptQuestRequestData info, ItemEventRouterResponse __result)
+    public static void Postfix(MongoId sessionID, AcceptQuestRequestData info,
+        ref ValueTask<ItemEventRouterResponse> __result)
     {
-        if (__result.Warnings != null && __result.Warnings.Count > 0)
+        __result = HandleAccepted(__result, sessionID, info);
+    }
+
+    private static async ValueTask<ItemEventRouterResponse> HandleAccepted(
+        ValueTask<ItemEventRouterResponse> originalResult, MongoId sessionID, AcceptQuestRequestData info)
+    {
+        var response = await originalResult.ConfigureAwait(false);
+        if (response.Warnings != null && response.Warnings.Count > 0)
         {
-            return;
+            return response;
         }
 
-        var state = StateService.GetState(sessionID);
-        if (ExfilQuests.List.ContainsKey(info.QuestId) && !state.QuestExfils.Contains(info.QuestId))
+        StateService.WithState(sessionID, state =>
         {
-            state.QuestExfils.Add(info.QuestId);
-            StateService.SaveState(sessionID, state);
-        }
+            if (ExfilQuests.List.ContainsKey(info.QuestId) && !state.QuestExfils.Contains(info.QuestId))
+            {
+                state.QuestExfils.Add(info.QuestId);
+                StateService.SaveState(sessionID, state);
+            }
+        });
+
+        return response;
     }
 }
 
@@ -42,34 +54,45 @@ public sealed class QuestCallbacksCompleteQuestPatch : AbstractPatch
     }
 
     [PatchPostfix]
-    public static void Postfix(MongoId sessionID, CompleteQuestRequestData info, ItemEventRouterResponse __result)
+    public static void Postfix(MongoId sessionID, CompleteQuestRequestData info,
+        ref ValueTask<ItemEventRouterResponse> __result)
     {
-        if (__result.Warnings != null && __result.Warnings.Count > 0)
+        __result = HandleCompleted(__result, sessionID, info);
+    }
+
+    private static async ValueTask<ItemEventRouterResponse> HandleCompleted(
+        ValueTask<ItemEventRouterResponse> originalResult, MongoId sessionID, CompleteQuestRequestData info)
+    {
+        var response = await originalResult.ConfigureAwait(false);
+        if (response.Warnings != null && response.Warnings.Count > 0)
         {
-            return;
+            return response;
         }
 
-        var state = StateService.GetState(sessionID);
-
-        var questId = info.QuestId.ToString();
-
-        if (state.QuestExfils.Contains(questId))
+        StateService.WithState(sessionID, state =>
         {
-            state.QuestExfils.Remove(questId);
-        }
+            var questId = info.QuestId.ToString();
 
-        if (questId == QuestsConfig.RelocationQuestId)
-        {
-            state.CanPlaceHideout = true;
+            if (state.QuestExfils.Contains(questId))
+            {
+                state.QuestExfils.Remove(questId);
+            }
 
-            var pmc = VagabondService.GetPmcProfile(sessionID)?.CharacterData?.PmcData;
-            pmc?.Quests?.RemoveAll(q => q.QId == questId);
-        }
-        else if (QuestsConfig.HideoutTraderByQuestId.TryGetValue(questId, out var traderId))
-        {
-            state.HideoutTraders.Add(traderId);
-        }
+            if (questId == QuestsConfig.RelocationQuestId)
+            {
+                state.CanPlaceHideout = true;
 
-        StateService.SaveState(sessionID, state);
+                var pmc = VagabondService.GetPmcProfile(sessionID)?.CharacterData?.PmcData;
+                pmc?.Quests?.RemoveAll(q => q.QId == questId);
+            }
+            else if (QuestsConfig.HideoutTraderByQuestId.TryGetValue(questId, out var traderId))
+            {
+                state.HideoutTraders.Add(traderId);
+            }
+
+            StateService.SaveState(sessionID, state);
+        });
+
+        return response;
     }
 }

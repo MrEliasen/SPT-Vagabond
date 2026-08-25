@@ -1,4 +1,7 @@
 using System.Reflection;
+using ChatShared;
+using EFT;
+using EFT.Communications;
 using EFT.UI.Chat;
 using HarmonyLib;
 using SPT.Reflection.Patching;
@@ -8,12 +11,12 @@ namespace Vagabond.Client.Patches;
 
 public class BlockTraderMailClaimGetPatch : ModulePatch
 {
-    private static readonly AccessTools.FieldRef<MessageView, ChatMessageClass> _messageField =
-        AccessTools.FieldRefAccess<MessageView, ChatMessageClass>("DialogueChatMessage");
+    private static readonly AccessTools.FieldRef<MessageView, DialogueChatMessage> _messageField =
+        AccessTools.FieldRefAccess<MessageView, DialogueChatMessage>("DialogueChatMessage");
 
     protected override MethodBase GetTargetMethod()
     {
-        return AccessTools.Method(typeof(AttachmentMessageView), "method_4");
+        return AccessTools.Method(typeof(AttachmentMessageView), "CG_Awake");
     }
 
     [PatchPrefix]
@@ -25,7 +28,12 @@ public class BlockTraderMailClaimGetPatch : ModulePatch
         }
 
         var chatMessage = _messageField(__instance);
-        var traderId = chatMessage?.Member?.Id;
+        if (chatMessage == null || chatMessage.Type != EMessageType.NpcTraderMessage)
+        {
+            return true;
+        }
+
+        var traderId = chatMessage.Member?.Id;
         if (string.IsNullOrEmpty(traderId))
         {
             return true;
@@ -33,6 +41,11 @@ public class BlockTraderMailClaimGetPatch : ModulePatch
 
         // whitelist BTR driver
         if (traderId == "656f0f98d80a697f855d34b1")
+        {
+            return true;
+        }
+
+        if (!MongoIdGuard.IsMongoIdFormat(traderId))
         {
             return true;
         }
@@ -49,7 +62,7 @@ public class BlockTraderMailClaimGetPatch : ModulePatch
         }
 
         var name = info.Settings?.Nickname?.Localized() ?? "Trader";
-        NotificationManagerClass.DisplayWarningNotification($"{name} is not available at your current location.");
+        NotificationManager.DisplayWarningNotification($"{name} is not available at your current location.");
         return false;
     }
 }

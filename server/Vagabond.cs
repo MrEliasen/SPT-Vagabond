@@ -1,18 +1,25 @@
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Models.Spt.Mod;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Services.Mod;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Services.Commerce;
+using SPTarkov.Server.Core.Services.Locales;
+using SPTarkov.Server.Core.Services.Modding;
+using SPTarkov.Server.Core.Services.Modding.Custom;
+using SPTarkov.Server.Core.Helpers.Profile;
+using SPTarkov.Server.Core.Helpers.Traders;
 using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Servers;
-using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Controllers;
 using SPTarkov.Server.Core.Generators;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
+using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Spt.Config;
+using SPTarkov.Server.Core.Models.Spt.Tables;
+using SPTarkov.Server.Core.Utils;
+using SPTarkov.Server.Core.Utils.Cloners;
 using Vagabond.Common;
 using Vagabond.Common.Api;
 using Vagabond.Server.Config;
@@ -20,22 +27,22 @@ using Vagabond.Server.Services;
 
 namespace Vagabond.Server;
 
-public record ModMetadata : AbstractModMetadata
+public class ModMetadata : IModMetadata
 {
-    public override string ModGuid { get; init; } = VagabondModInfo.Guid;
-    public override string Name { get; init; } = VagabondModInfo.Name;
-    public override string Author { get; init; } = VagabondModInfo.Author;
-    public override SemanticVersioning.Version Version { get; init; } = new(VagabondModInfo.Version);
-    public override SemanticVersioning.Range SptVersion { get; init; } = new(VagabondModInfo.SptVersion);
-    public override string? Url { get; init; } = VagabondModInfo.Url;
-    public override string License { get; init; } = VagabondModInfo.License;
-    public override List<string>? Contributors { get; init; } = new() { VagabondModInfo.Author };
-    public override List<string>? Incompatibilities { get; init; }
-    public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
-    public override bool? IsBundleMod { get; init; }
+    public string ModGuid { get; init; } = VagabondModInfo.Guid;
+    public string Name { get; init; } = VagabondModInfo.Name;
+    public string Author { get; init; } = VagabondModInfo.Author;
+    public SemanticVersioning.Version Version { get; init; } = new(VagabondModInfo.Version);
+    public SemanticVersioning.Range SptVersion { get; init; } = new(VagabondModInfo.SptVersion);
+    public bool HasPrepatcher { get; init; }
+    public string? Url { get; init; } = VagabondModInfo.Url;
+    public string License { get; init; } = VagabondModInfo.License;
+    public List<string>? Contributors { get; init; } = new() { VagabondModInfo.Author };
+    public List<string>? Incompatibilities { get; init; }
+    public Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
 }
 
-[Injectable(TypePriority = OnLoadOrder.PreSptModLoader)]
+[Injectable(TypePriority = OnLoadOrder.Preload)]
 public sealed class VagabondLoader : IOnLoad
 {
     public VagabondLoader(ISptLogger<VagabondLoader> logger)
@@ -43,7 +50,7 @@ public sealed class VagabondLoader : IOnLoad
         VagabondLogger.Init(logger);
     }
 
-    public Task OnLoad()
+    public Task OnLoadAsync(CancellationToken cancellationToken)
     {
         // exfils/transits
         Api.AddExfilsImpl = ExfilService.AddCustomExfils;
@@ -80,6 +87,7 @@ public sealed class VagabondLoader : IOnLoad
         new Patches.QuestCallbacksCompleteQuestPatch().Enable();
         new Patches.QuestControllerGetClientQuestsPatch().Enable();
         new Patches.ItemEventRouterHandleEventsPatch().Enable();
+        new Patches.SaveProfilePatch().Enable();
         new Patches.TradeHelperBuyItemPatch().Enable();
         new Patches.TradeHelperSellItemPatch().Enable();
         new Patches.PaymentServicePayMoneyPatch().Enable();
@@ -98,7 +106,7 @@ public sealed class VagabondLoader : IOnLoad
     }
 }
 
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
+[Injectable(TypePriority = OnLoadOrder.PostLoad + 1)]
 public sealed class VagabondDbLoader : IOnLoad
 {
     private readonly IServiceProvider _services;
@@ -106,18 +114,26 @@ public sealed class VagabondDbLoader : IOnLoad
     private readonly SaveServer _saveServer;
     private readonly InventoryHelper _invHelper;
     private readonly EventOutputHolder _eventOutputHolder;
-    private readonly DatabaseService _databaseService;
+    private readonly LocationTable _locationTable;
+    private readonly TemplateTable _templateTable;
+    private readonly TradersTable _tradersTable;
+    private readonly LocaleTable _localeTable;
     private readonly MailSendService _mailSendService;
     private readonly LocationController _locationController;
     private readonly CustomQuestService _customQuestService;
     private readonly LocaleService _localeService;
+    private readonly JsonUtil _jsonUtil;
+    private readonly ICloner _cloner;
 
     private readonly ISptLogger<VagabondDbLoader> _logger;
 
     public VagabondDbLoader(
         IServiceProvider services,
         ProfileDataService profileDataService,
-        DatabaseService databaseService,
+        LocationTable locationTable,
+        TemplateTable templateTable,
+        TradersTable tradersTable,
+        LocaleTable localeTable,
         SaveServer saveServer,
         InventoryHelper invHelper,
         EventOutputHolder eventOutputHolder,
@@ -125,6 +141,8 @@ public sealed class VagabondDbLoader : IOnLoad
         LocationController locationController,
         CustomQuestService customQuestService,
         LocaleService localeService,
+        JsonUtil jsonUtil,
+        ICloner cloner,
         ISptLogger<VagabondDbLoader> logger)
     {
         _services = services;
@@ -136,11 +154,16 @@ public sealed class VagabondDbLoader : IOnLoad
         _mailSendService = mailSendService;
         _locationController = locationController;
         _customQuestService = customQuestService;
-        _databaseService = databaseService;
+        _locationTable = locationTable;
+        _templateTable = templateTable;
+        _tradersTable = tradersTable;
+        _localeTable = localeTable;
         _localeService = localeService;
+        _jsonUtil = jsonUtil;
+        _cloner = cloner;
     }
 
-    public Task OnLoad()
+    public Task OnLoadAsync(CancellationToken cancellationToken)
     {
         ReflectionUtil.Register(_services);
         ReflectionUtil.Register(_profileDataService);
@@ -149,10 +172,15 @@ public sealed class VagabondDbLoader : IOnLoad
         ReflectionUtil.Register(_eventOutputHolder);
         ReflectionUtil.Register(_mailSendService);
         ReflectionUtil.Register(_locationController);
-        ReflectionUtil.Register(_databaseService);
+        ReflectionUtil.Register(_locationTable);
+        ReflectionUtil.Register(_templateTable);
+        ReflectionUtil.Register(_localeTable);
         ReflectionUtil.Register(_customQuestService);
         ReflectionUtil.Register(_localeService);
-        ExfilService.Apply(_databaseService);
+        ReflectionUtil.Register(_jsonUtil);
+        ReflectionUtil.Register(_cloner);
+        ExfilService.Apply(_locationTable);
+        ConfigVerificationService.VerifyAgainstDatabase(_tradersTable);
 
         if (FikaAdapter.Init(_services))
         {
@@ -164,32 +192,34 @@ public sealed class VagabondDbLoader : IOnLoad
     }
 }
 
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 2)]
-public class GameChanges(DatabaseService databaseService) : IOnLoad
+[Injectable(TypePriority = OnLoadOrder.PostLoad + 2)]
+public class GameChanges(
+    LocationTable locationTable,
+    GlobalTable globalTable,
+    TemplateTable templateTable) : IOnLoad
 {
-    public Task OnLoad()
+    public Task OnLoadAsync(CancellationToken cancellationToken)
     {
-        var locationsdb = databaseService.GetLocations();
-        locationsdb.SandboxHigh.Base.Enabled = true;
+        locationTable.SandboxHigh.Base.Enabled = true;
 
-        Globals globals = databaseService.GetGlobals();
-        globals.Configuration.SavagePlayCooldown = 14400;
-        globals.Configuration.Exp.MatchEnd.SurvivedExperienceRequirement = 0;
-        globals.Configuration.Exp.MatchEnd.SurvivedSecondsRequirement = 0;
+        GlobalConfig globalConfig = globalTable.Configuration;
+        globalConfig.SavagePlayCooldown = 14400;
+        globalConfig.Exp.MatchEnd.SurvivedExperienceRequirement = 0;
+        globalConfig.Exp.MatchEnd.SurvivedSecondsRequirement = 0;
 
         if (VagabondConfig.Config.DisableFlea)
         {
-            globals.Configuration.RagFair.MinUserLevel = 99;
+            globalConfig.RagFair.MinUserLevel = 99;
         }
 
         if (VagabondConfig.Config.DisableEvents)
         {
-            globals.Configuration.EventSettings.EventActive = false;
+            globalConfig.EventSettings.EventActive = false;
         }
 
         // Credit: https://github.com/GhostFenixx/svm-csharp
         // ty ty <3
-        var items = databaseService.GetItems();
+        var items = templateTable.Items;
         foreach (TemplateItem basetemplate in items.Values)
         {
             //Remove container Restrictions
@@ -232,13 +262,13 @@ public class GameChanges(DatabaseService databaseService) : IOnLoad
             }
 
             // remove trial heals
-            globals.Configuration.Health.HealPrice.TrialRaids = 0;
-            globals.Configuration.Health.HealPrice.TrialLevels = 0;
+            globalConfig.Health.HealPrice.TrialRaids = 0;
+            globalConfig.Health.HealPrice.TrialLevels = 0;
 
             //Remove max number of item you can take in raid
             // Credit: https://github.com/acidphantasm/itemlimitsbegone-csharp/
             // ty ty <3
-            var restrictionsInRaid = globals.Configuration.RestrictionsInRaid;
+            var restrictionsInRaid = globalConfig.RestrictionsInRaid;
 
             foreach (var restriction in restrictionsInRaid)
             {
@@ -249,7 +279,7 @@ public class GameChanges(DatabaseService databaseService) : IOnLoad
 
         if (VagabondConfig.Config.AdjustRaidTimeMins != 0)
         {
-            foreach (Location names in locationsdb.GetDictionary().Values)
+            foreach (Location names in locationTable.GetDictionary().Values)
             {
                 names.Base.ExitAccessTime += VagabondConfig.Config.AdjustRaidTimeMins;
                 names.Base.EscapeTimeLimit += VagabondConfig.Config.AdjustRaidTimeMins;
@@ -260,27 +290,28 @@ public class GameChanges(DatabaseService databaseService) : IOnLoad
 
         QuestService.LoadQuests();
 
+        ConfigVerificationService.LogSummary();
+
         return Task.CompletedTask;
     }
 }
 
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 10)]
+[Injectable(TypePriority = OnLoadOrder.PostLoad + 10)]
 public class FenceTweaks(
-    DatabaseService databaseService,
-    ConfigServer configServer,
+    TradersTable tradersTable,
+    TraderConfig traderConfig,
     TraderHelper traderHelper,
     FenceBaseAssortGenerator fenceBaseAssortGenerator,
     FenceService fenceService
 ) : IOnLoad
 {
-    public Task OnLoad()
+    public Task OnLoadAsync(CancellationToken cancellationToken)
     {
         if (!VagabondConfig.Config.EnableFenceChanges)
         {
             return Task.CompletedTask;
         }
 
-        var traderConfig = configServer.GetConfig<TraderConfig>();
         traderConfig.Fence.DiscountOptions.AssortSize = 0;
 
         // durability
@@ -408,8 +439,7 @@ public class FenceTweaks(
         fenceBaseAssortGenerator.GenerateFenceBaseAssorts();
         fenceService.GenerateFenceAssorts();
 
-        var traders = databaseService.GetTraders();
-        if (traders.TryGetValue("579dc571d53a0658a154fbec", out var fence))
+        if (tradersTable.TryGetValue("579dc571d53a0658a154fbec", out var fence))
         {
             fence.Base.NextResupply = (int)traderHelper.GetNextUpdateTimestamp(fence.Base.Id);
             fence.Base.RefreshTraderRagfairOffers = true;

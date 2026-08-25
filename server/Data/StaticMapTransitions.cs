@@ -94,11 +94,7 @@ public static class StaticMapTransitions
             return false;
         }
 
-        var exfil = ExfilService.HideoutExfils[raid]
-            .SelectMany(x => x.Value)
-            .FirstOrDefault(y =>
-                string.Equals(y.Identifier, exitName, StringComparison.OrdinalIgnoreCase)
-            );
+        var exfil = ExfilService.FindHideoutExfilByIdentifier(raid, exitName);
         if (exfil == null)
         {
             return false;

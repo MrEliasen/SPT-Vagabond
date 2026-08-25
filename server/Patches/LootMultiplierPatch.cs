@@ -1,6 +1,6 @@
 using System.Reflection;
 using SPTarkov.Reflection.Patching;
-using SPTarkov.Server.Core.Generators;
+using SPTarkov.Server.Core.Generators.Loot;
 using Vagabond.Server.Services;
 
 namespace Vagabond.Server.Patches;

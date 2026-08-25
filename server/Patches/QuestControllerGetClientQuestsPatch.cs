@@ -23,8 +23,9 @@ public sealed class QuestControllerGetClientQuestsPatch : AbstractPatch
             return;
         }
 
-        var state = StateService.GetState(sessionId);
-        if (state.HideoutState == null || state.CanPlaceHideout)
+        var hideRelocationQuest = StateService.WithState(sessionId,
+            state => state.HideoutState == null || state.CanPlaceHideout);
+        if (hideRelocationQuest)
         {
             var relocationQuestId = QuestsConfig.RelocationQuestId;
             if (relocationQuestId != null)

@@ -1,6 +1,6 @@
 ﻿using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Enums;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using Vagabond.Common.Data;
 using Vagabond.Common.Definitions;
 using Vagabond.Common.Enums;
@@ -11,18 +11,59 @@ namespace Vagabond.Server.Services;
 
 internal static class ExfilService
 {
-    public static Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>> CustomExfils = new();
-    public static Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>> HideoutExfils = new();
-    private static Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>? _snapshotCache;
-    public static int SnapshotCacheVersion = 1;
-    private static HashSet<string> _loadedHideoutExfils = new();
+    // Guards every mutation/enumeration of the collections below. Innermost lock: never held while
+    // calling into StateService or VirtualStashService. Readers outside the lock only ever consume the
+    // immutable snapshot reference; CustomExfil instances are frozen once registered.
+    private static readonly Lock ExfilLock = new();
+
+    private static readonly Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>> CustomExfils = new();
+    private static readonly Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>> HideoutExfils = new();
+
+    // A2: Kestrel accepts requests for the whole IOnLoad phase, while the routes and patches go live at
+    // Preload and Apply only runs at PostLoad+1. Until Apply has populated the dictionaries there is
+    // nothing to serve and nothing may be cached: a snapshot built from the empty dictionaries would be
+    // published at a bumped version and, since ApplyLocked never invalidated it, would stay the answer
+    // for the rest of the server run. The versioned exfil route answers not-ready with version 0 and an
+    // empty set, which matches the client's own initial version so nothing is applied; the unversioned
+    // state route answers with null, which the client reads as "no change" (MINOR-2).
+    private static volatile bool _applied;
+
+    // A5: read outside ExfilLock at BuildCustomExfilSnapshot, written inside it. Volatile for the same
+    // reason HideoutService._traderLocations is: the build-new-then-swap publication needs a release
+    // barrier on weakly-ordered targets (SPT ships linux-arm64).
+    private static volatile Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>? _snapshotCache;
+
+    // Concurrency MINOR-3: the client's CustomExfilsCacheVersion (client/State/VagabondState.cs:19) is a
+    // per-process static that is never reset, so it outlives a server restart. With a counter that
+    // starts at the same number every boot, a surviving client sits at exactly the version the new
+    // process serves first, the router's `payload.Version != version` gate never fires, and edited
+    // configs are never delivered. Seeding per process puts each boot in its own version namespace.
+    private static int _snapshotCacheVersion = SeedSnapshotVersion();
+    private static readonly HashSet<string> _loadedHideoutExfils = new();
+
+    private const int NotReadySnapshotVersion = 0;
 
     // API-added entires offset start
     private static int _nextApiExfilOffset = 20000;
 
-    private static Location? RaidLocationToLocation(DatabaseService databaseService, RaidLocation raid)
+    /// <summary>
+    /// Boot-derived seed for the snapshot version counter (Concurrency MINOR-3). Two boots cannot land
+    /// on the same value: the unix second and the process id are both mixed in. Masked to 30 bits so the
+    /// value is always positive and in-process increments cannot overflow, and forced away from
+    /// <see cref="NotReadySnapshotVersion"/>, which is the client's "nothing yet" sentinel. Versions stay
+    /// monotonic within the process because the only other write is the increment in
+    /// BuildCustomExfilSnapshotLocked. A large or non-sequential value is fine: both comparisons are
+    /// plain inequality (VagabondRouter.HandleSyncExfilRoute and client CommunicationService).
+    /// </summary>
+    private static int SeedSnapshotVersion()
     {
-        var locations = databaseService.GetLocations();
+        var mixed = (DateTimeOffset.UtcNow.ToUnixTimeSeconds() << 16) ^ Environment.ProcessId;
+        var seed = (int)(mixed & 0x3FFFFFFF);
+        return seed == NotReadySnapshotVersion ? 1 : seed;
+    }
+
+    private static Location? RaidLocationToLocation(LocationTable locations, RaidLocation raid)
+    {
         return raid switch
         {
             RaidLocation.Customs => locations.Bigmap,
@@ -43,9 +84,8 @@ internal static class ExfilService
 
     // GroundZero fix
     private static IEnumerable<(Location location, string mapName)> RaidLocationToSptLocations(
-        DatabaseService databaseService, RaidLocation raid)
+        LocationTable locations, RaidLocation raid)
     {
-        var locations = databaseService.GetLocations();
         switch (raid)
         {
             case RaidLocation.Customs: yield return (locations.Bigmap, "bigmap"); break;
@@ -75,6 +115,14 @@ internal static class ExfilService
 
         var exfileId = $"{HideoutService.HideoutIdPrefix}{state.Id}";
 
+        lock (ExfilLock)
+        {
+            RemoveHideoutLocked(state.Id, exfileId);
+        }
+    }
+
+    private static void RemoveHideoutLocked(string hideoutId, string exfileId)
+    {
         // remove hideout
         foreach (var raids in HideoutExfils)
         {
@@ -105,10 +153,18 @@ internal static class ExfilService
             }
         }
 
-        _loadedHideoutExfils.Remove(state.Id);
+        _loadedHideoutExfils.Remove(hideoutId);
     }
 
-    public static void Apply(DatabaseService databaseService)
+    public static void Apply(LocationTable locationTable)
+    {
+        lock (ExfilLock)
+        {
+            ApplyLocked(locationTable);
+        }
+    }
+
+    private static void ApplyLocked(LocationTable locationTable)
     {
         foreach (var loc in Enum.GetValues(typeof(RaidLocation)).Cast<RaidLocation>())
         {
@@ -152,18 +208,81 @@ internal static class ExfilService
 
         foreach (var (raid, entry) in ExfilsConfig.Maps)
         {
-            var sptLocs = RaidLocationToSptLocations(databaseService, raid).ToList();
+            var sptLocs = RaidLocationToSptLocations(locationTable, raid).ToList();
             if (sptLocs.Count == 0)
             {
                 continue;
             }
 
+            var transits = NormalizeTransitDestinations(locationTable, entry.Transits, $"config '{raid}'");
+
             var offset = raidToOffset.GetValueOrDefault(raid, 12000);
             foreach (var (location, mapName) in sptLocs)
             {
-                AddExtractions(offset, location, raid, mapName, entry.Extracts, entry.Transits);
+                AddExtractions(offset, location, raid, mapName, entry.Extracts, transits);
             }
         }
+
+        _applied = true;
+        BuildCustomExfilSnapshotLocked(forceRebuild: true);
+    }
+
+    private static List<CustomExfil> NormalizeTransitDestinations(LocationTable locations,
+        List<CustomExfil> transits, string source)
+    {
+        var valid = new List<CustomExfil>(transits.Count);
+        foreach (var transit in transits)
+        {
+            var resolved = ResolveDbLocationId(locations, transit.DestinationLocation);
+            if (resolved == null || !VagabondLocations.LookupTable.ContainsKey(resolved))
+            {
+                VagabondLogger.Error(
+                    $"Transit '{transit.Identifier}' ({source}): DestinationLocation " +
+                    $"'{transit.DestinationLocation}' does not resolve to a known raid location id. " +
+                    "The transit is DROPPED — a broken destination id is the issue-136 no-extracts soft-lock.");
+                continue;
+            }
+
+            if (!string.Equals(transit.DestinationLocation, resolved, StringComparison.Ordinal))
+            {
+                VagabondLogger.Warning(
+                    $"Transit '{transit.Identifier}' ({source}): DestinationLocation " +
+                    $"'{transit.DestinationLocation}' normalized to DB location id '{resolved}'.");
+                transit.DestinationLocation = resolved;
+            }
+
+            if (!string.IsNullOrWhiteSpace(transit.AccessKeysSourceLocation))
+            {
+                var resolvedKeys = ResolveDbLocationId(locations, transit.AccessKeysSourceLocation);
+                if (resolvedKeys == null)
+                {
+                    VagabondLogger.Warning(
+                        $"Transit '{transit.Identifier}' ({source}): AccessKeysSourceLocation " +
+                        $"'{transit.AccessKeysSourceLocation}' does not resolve to a DB location id; left as-is.");
+                }
+                else if (!string.Equals(transit.AccessKeysSourceLocation, resolvedKeys, StringComparison.Ordinal))
+                {
+                    VagabondLogger.Warning(
+                        $"Transit '{transit.Identifier}' ({source}): AccessKeysSourceLocation " +
+                        $"'{transit.AccessKeysSourceLocation}' normalized to DB location id '{resolvedKeys}'.");
+                    transit.AccessKeysSourceLocation = resolvedKeys;
+                }
+            }
+
+            valid.Add(transit);
+        }
+
+        return valid;
+    }
+
+    private static string? ResolveDbLocationId(LocationTable locations, string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return null;
+        }
+
+        return locations.GetLocation(id)?.Base?.Id;
     }
 
     private static void AddExtractions(int pointIdOffset, Location location, RaidLocation raid, string mapName,
@@ -173,9 +292,12 @@ internal static class ExfilService
 
         foreach (var ext in extracts)
         {
-            ext.EntryPoints = pmcEntryPoints;
+            var entryPoints = string.IsNullOrWhiteSpace(ext.EntryPoints)
+                ? pmcEntryPoints
+                : ext.EntryPoints;
+
             CustomExfils[raid][mapName].Add(ext);
-            AddOrReplaceExtract(location, ext);
+            AddOrReplaceExtract(location, ext, entryPoints);
         }
 
         var i = 1;
@@ -195,23 +317,64 @@ internal static class ExfilService
             return false;
         }
 
-        return CustomExfils[raid][mapName]
-            .Any(x => string.Equals(x.DisplayName, name, StringComparison.OrdinalIgnoreCase)
-                      || string.Equals(x.Identifier, name, StringComparison.OrdinalIgnoreCase));
+        lock (ExfilLock)
+        {
+            return TryGetExfils(CustomExfils, raid, mapName)
+                ?.Any(x => string.Equals(x.DisplayName, name, StringComparison.OrdinalIgnoreCase)
+                           || string.Equals(x.Identifier, name, StringComparison.OrdinalIgnoreCase)) ?? false;
+        }
     }
 
-    private static void AddOrReplaceExtract(Location location, CustomExfil definition)
+    public static CustomExfil? FindCustomExfil(RaidLocation raid, string mapName, string exitName)
+    {
+        lock (ExfilLock)
+        {
+            return TryGetExfils(CustomExfils, raid, mapName)?.FirstOrDefault(x =>
+                string.Equals(x.Identifier, exitName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(x.DisplayName, exitName, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    public static CustomExfil? FindHideoutExfilByDisplayName(RaidLocation raid, string mapName, string displayName)
+    {
+        lock (ExfilLock)
+        {
+            return TryGetExfils(HideoutExfils, raid, mapName)?.FirstOrDefault(x =>
+                string.Equals(x.DisplayName, displayName, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private static List<CustomExfil>? TryGetExfils(
+        Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>> source, RaidLocation raid, string mapName)
+    {
+        return source.TryGetValue(raid, out var byMap) && byMap.TryGetValue(mapName, out var exfils)
+            ? exfils
+            : null;
+    }
+
+    public static CustomExfil? FindHideoutExfilByIdentifier(RaidLocation raid, string identifier)
+    {
+        lock (ExfilLock)
+        {
+            return HideoutExfils.TryGetValue(raid, out var byMap)
+                ? byMap.SelectMany(x => x.Value).FirstOrDefault(y =>
+                    string.Equals(y.Identifier, identifier, StringComparison.OrdinalIgnoreCase))
+                : null;
+        }
+    }
+
+    private static void AddOrReplaceExtract(Location location, CustomExfil definition, string entryPoints)
     {
         var allExtracts = location.AllExtracts.ToList();
         allExtracts.RemoveAll(x => string.Equals(x.Name, definition.DisplayName, StringComparison.OrdinalIgnoreCase)
                                    || string.Equals(x.SptName, definition.Identifier,
                                        StringComparison.OrdinalIgnoreCase));
-        allExtracts.Add(CreateExit(definition));
+        allExtracts.Add(CreateExit(definition, entryPoints));
         location.AllExtracts = allExtracts;
 
         var baseExits = location.Base.Exits.ToList();
         baseExits.RemoveAll(x => string.Equals(x.Name, definition.DisplayName, StringComparison.OrdinalIgnoreCase));
-        baseExits.Add(CreateExit(definition));
+        baseExits.Add(CreateExit(definition, entryPoints));
         location.Base.Exits = baseExits;
     }
 
@@ -229,9 +392,10 @@ internal static class ExfilService
             Conditions = string.Empty,
             Id = definition.TransitPointId,
             Location = definition.DestinationLocation,
-            Target = string.IsNullOrWhiteSpace(definition.AccessKeysSourceLocation)
-                ? definition.DestinationLocation
-                : definition.AccessKeysSourceLocation,
+            Target = ResolveLocationMongoId(
+                string.IsNullOrWhiteSpace(definition.AccessKeysSourceLocation)
+                    ? definition.DestinationLocation
+                    : definition.AccessKeysSourceLocation),
             ActivateAfterSeconds = definition.ActivateAfterSeconds,
             Time = (long)Math.Round(definition.ExfiltrationTime),
             IsActive = definition.IsActive,
@@ -242,7 +406,22 @@ internal static class ExfilService
         location.Base.Transits = transits;
     }
 
-    private static AllExtractsExit CreateExit(CustomExfil definition)
+    private static string? ResolveLocationMongoId(string? mapName)
+    {
+        var raid = VagabondLocations.NormaliseMapName(mapName);
+        if (raid == RaidLocation.Nil || !VagabondLocations.Locations.TryGetValue(raid, out var ids) ||
+            ids.Count == 0)
+        {
+            VagabondLogger.Warning(
+                $"Transit target '{mapName}' does not resolve to a location id; the transit's key gate " +
+                "will not apply.");
+            return mapName;
+        }
+
+        return ids.First();
+    }
+
+    private static AllExtractsExit CreateExit(CustomExfil definition, string entryPoints)
     {
         return new AllExtractsExit
         {
@@ -252,7 +431,7 @@ internal static class ExfilService
             ChancePVE = 100,
             Count = 0,
             CountPVE = 0,
-            EntryPoints = definition.EntryPoints,
+            EntryPoints = entryPoints,
             EventAvailable = false,
             ExfiltrationTime = definition.ExfiltrationTime,
             ExfiltrationTimePVE = definition.ExfiltrationTime,
@@ -273,7 +452,7 @@ internal static class ExfilService
 
     private static string GetPmcEntryPoints(Location location)
     {
-        var entryPoints = location.Base.Exits
+        var entryPoints = location.AllExtracts
             .Where(x => string.Equals(x.Side, "Pmc", StringComparison.OrdinalIgnoreCase))
             .Select(x => x.EntryPoints)
             .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -309,6 +488,19 @@ internal static class ExfilService
 
     public static bool AddHideoutExfil(PmcData pmc, VagabondSessionState state)
     {
+        lock (ExfilLock)
+        {
+            return AddHideoutExfilLocked(pmc, state);
+        }
+    }
+
+    private static bool AddHideoutExfilLocked(PmcData pmc, VagabondSessionState state)
+    {
+        if (!_applied)
+        {
+            return false;
+        }
+
         if (string.IsNullOrEmpty(state.HideoutState?.Id) || _loadedHideoutExfils.Contains(state.HideoutState.Id))
         {
             return false;
@@ -415,8 +607,48 @@ internal static class ExfilService
         return hideoutExfil;
     }
 
-    public static Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>> BuildCustomExfilSnapshot(
+    public static (int Version, Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>? Snapshot)
+        GetSnapshotWithVersion()
+    {
+        if (!_applied)
+        {
+            return (NotReadySnapshotVersion, null);
+        }
+
+        lock (ExfilLock)
+        {
+            var snapshot = BuildCustomExfilSnapshotLocked(false);
+            return (_snapshotCacheVersion, snapshot);
+        }
+    }
+
+    public static Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>? BuildCustomExfilSnapshot(
         bool forceRebuild = false)
+    {
+        if (!_applied)
+        {
+            return null;
+        }
+
+        var cached = _snapshotCache;
+        if (cached != null && !forceRebuild)
+        {
+            return cached;
+        }
+
+        lock (ExfilLock)
+        {
+            return BuildCustomExfilSnapshotLocked(forceRebuild);
+        }
+    }
+
+    private static Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>> EmptySnapshot()
+    {
+        return new Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>();
+    }
+
+    private static Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>> BuildCustomExfilSnapshotLocked(
+        bool forceRebuild)
     {
         if (_snapshotCache != null && !forceRebuild)
         {
@@ -475,14 +707,19 @@ internal static class ExfilService
         }
 
         _snapshotCache = snapshot;
-        SnapshotCacheVersion++;
+        _snapshotCacheVersion++;
         return snapshot;
     }
 
-    /// <summary>
-    /// API: add/replace custom exfils.
-    /// </summary>
     internal static void AddCustomExfils(RaidLocation raid, List<CustomExfil> transits, List<CustomExfil> extracts)
+    {
+        lock (ExfilLock)
+        {
+            AddCustomExfilsLocked(raid, transits, extracts);
+        }
+    }
+
+    private static void AddCustomExfilsLocked(RaidLocation raid, List<CustomExfil> transits, List<CustomExfil> extracts)
     {
         if (!CustomExfils.TryGetValue(raid, out var raidMaps))
         {
@@ -490,15 +727,16 @@ internal static class ExfilService
             return;
         }
 
-        var databaseService = ReflectionUtil.GetService<DatabaseService>();
-        var location = RaidLocationToLocation(databaseService!, raid);
+        var locationTable = ReflectionUtil.GetService<LocationTable>();
+        var location = RaidLocationToLocation(locationTable!, raid);
         if (location == null)
         {
             VagabondLogger.Warning($"AddCustomExfils: no live location for raid '{raid}'; nothing applied.");
             return;
         }
 
-        var newTransits = new List<CustomExfil>(transits);
+        var newTransits = NormalizeTransitDestinations(locationTable!, new List<CustomExfil>(transits),
+            $"api '{raid}'");
         var newExtracts = new List<CustomExfil>(extracts);
 
         // dedupe
@@ -521,13 +759,18 @@ internal static class ExfilService
             AddExtractions(0, location, raid, alias, newExtracts, newTransits);
         }
 
-        BuildCustomExfilSnapshot(forceRebuild: true);
+        BuildCustomExfilSnapshotLocked(forceRebuild: true);
     }
 
-    /// <summary>
-    /// API: remove custom exfil.
-    /// </summary>
     internal static bool RemoveCustomExfil(RaidLocation raid, string exfilId)
+    {
+        lock (ExfilLock)
+        {
+            return RemoveCustomExfilLocked(raid, exfilId);
+        }
+    }
+
+    private static bool RemoveCustomExfilLocked(RaidLocation raid, string exfilId)
     {
         if (string.IsNullOrWhiteSpace(exfilId))
         {
@@ -551,13 +794,13 @@ internal static class ExfilService
             return false;
         }
 
-        var databaseService = ReflectionUtil.GetService<DatabaseService>();
-        if (databaseService == null)
+        var locationTable = ReflectionUtil.GetService<LocationTable>();
+        if (locationTable == null)
         {
             return true;
         }
 
-        var location = RaidLocationToLocation(databaseService, raid);
+        var location = RaidLocationToLocation(locationTable, raid);
 
         if (location != null)
         {
@@ -585,33 +828,33 @@ internal static class ExfilService
             }
         }
 
-        BuildCustomExfilSnapshot(forceRebuild: true);
+        BuildCustomExfilSnapshotLocked(forceRebuild: true);
         return true;
     }
 
-    /// <summary>
-    /// API: returns list of current custom exfils.
-    /// </summary>
     internal static IReadOnlyList<CustomExfil> GetCustomExfils(RaidLocation raid)
     {
-        if (!CustomExfils.TryGetValue(raid, out var byMap))
+        lock (ExfilLock)
         {
-            return Array.Empty<CustomExfil>();
-        }
-
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var merged = new List<CustomExfil>();
-        foreach (var list in byMap.Values)
-        {
-            foreach (var exfil in list)
+            if (!CustomExfils.TryGetValue(raid, out var byMap))
             {
-                if (seen.Add(exfil.Identifier))
+                return Array.Empty<CustomExfil>();
+            }
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var merged = new List<CustomExfil>();
+            foreach (var list in byMap.Values)
+            {
+                foreach (var exfil in list)
                 {
-                    merged.Add(exfil);
+                    if (seen.Add(exfil.Identifier))
+                    {
+                        merged.Add(exfil);
+                    }
                 }
             }
-        }
 
-        return merged;
+            return merged;
+        }
     }
 }

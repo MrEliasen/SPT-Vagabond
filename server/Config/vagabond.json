@@ -20,7 +20,7 @@
   // adjust how long raids last by this amount of minutes, negagive values supported by be careful.
   "AdjustRaidTimeMins": 60,
   // if enabled, you can continue to place the hideout without any limitation.
-  // if disabled, to be able to relocate you will need to complete the "Fresh Foundations" quest from Skier (repeatable).
+  // if disabled, to be able to relocate you will need to complete the "Clean Slate" quest from Skier (repeatable).
   "AllowHideoutRelocation": false,
   // Where you will be placed when you die, options are: 
   // "hideout" - will send you to your hideout if you have one, otherwise "stays".
@@ -37,8 +37,7 @@
   //  Lighthouse,
   //  Reserve,
   //  Shoreline,
-  //  Labs,
-  //  Labyrinth
+  //  Labs
   "OnDeathGoTo": "hideout",
   "OnDeathGoToRaid": "",
   "OnDeathGoToExfilIdentifier": "",
@@ -54,8 +53,7 @@
   //  Lighthouse,
   //  Reserve,
   //  Shoreline,
-  //  Labs,
-  //  Labyrinth
+  //  Labs
   "StartRaid": "Streets",
   "StartExfilIdentifier": "VGB_EXT_FENCE",
   // will allow per-trader/per-extract (eg other players hideouts) virtual stashes.

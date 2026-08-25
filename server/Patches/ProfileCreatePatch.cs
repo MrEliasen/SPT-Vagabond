@@ -2,7 +2,7 @@ using System.Reflection;
 using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Profile;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Services.Profile;
 using Vagabond.Common.Data;
 using Vagabond.Server.Config;
 using Vagabond.Server.Services;
@@ -44,26 +44,34 @@ public sealed class ProfileCreatePatch : AbstractPatch
             return;
         }
 
-        var state = StateService.GetState(sessionId);
-        state.CurrentMap = VagabondConfig.Config.StartRaid;
-        state.LastExit = VagabondConfig.Config.StartExfilIdentifier;
-        state.VagabondModeEnabled = true;
-        state.IsNewCharacter = true;
-        StateService.SaveState(sessionId, state);
+        StateService.WithState(sessionId, state =>
+        {
+            var (startRaid, startExfil) = VagabondConfig.GetStartLocation();
+            state.CurrentMap = startRaid;
+            state.LastExit = startExfil;
+            state.VagabondModeEnabled = true;
+            state.IsNewCharacter = true;
+            StateService.SaveState(sessionId, state);
+        });
 
         var changed = InitializeNewCharacter(sessionId, pmc);
         if (!changed)
         {
-            state.CurrentMap = "";
-            state.LastExit = "";
-            state.VagabondModeEnabled = false;
-            StateService.SaveState(sessionId, state);
+            StateService.WithState(sessionId, state =>
+            {
+                state.CurrentMap = "";
+                state.LastExit = "";
+                state.VagabondModeEnabled = false;
+                StateService.SaveState(sessionId, state);
+            });
             VagabondLogger.Error(
                 $"BootstrapProfile did not modify profile for {sessionId}; InitializeNewCharacter did not complete.");
             return;
         }
 
-        HideoutService.UpdateTraderAccess(pmc.CharacterData.PmcData, state);
+        var pmcData = pmc.CharacterData!.PmcData!;
+        StateService.WithState(sessionId,
+            state => HideoutService.UpdateTraderAccess(pmcData, state));
         VagabondService.PersistProfileIfPossible(sessionId);
         MailerService.SendMail(sessionId, Messages.WelcomeOpenWorld());
         VagabondLogger.Success($"activated Vagabond profile for {sessionId}.");

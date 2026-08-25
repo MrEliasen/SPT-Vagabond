@@ -15,7 +15,7 @@ public sealed class RaidJoinPatch : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(MatchController).GetMethod(nameof(MatchController.StartLocalRaid))!;
+        return typeof(MatchController).GetMethod(nameof(MatchController.StartLocalRaidAsync))!;
     }
 
     [PatchPrefix]
@@ -39,12 +39,6 @@ public sealed class RaidJoinPatch : AbstractPatch
             return;
         }
 
-        var state = StateService.GetState(sessionId);
-        if (!state.VagabondModeEnabled)
-        {
-            return;
-        }
-
         var mapName = request.Location;
         if (mapName == null)
         {
@@ -57,37 +51,57 @@ public sealed class RaidJoinPatch : AbstractPatch
         // GroundZero fix
         if (mapNameE == RaidLocation.GroundZero)
         {
-            var lvl = pmc.CharacterData.PmcData.Info?.Level ?? 1;
-            var picked = VagabondService.GetGroundZeroMapIdForLevel(lvl);
+            var picked = VagabondService.GetGroundZeroMapIdForSession(sessionId);
             if (!string.Equals(mapName, picked, StringComparison.OrdinalIgnoreCase))
             {
                 request.Location = picked;
             }
         }
 
-        if (string.IsNullOrEmpty(state.CurrentMap) && mapNameE != RaidLocation.Nil)
+        var (enabled, wasNewCharacter) = StateService.WithState(sessionId, state =>
         {
-            state.TransitState = null;
-            state.CurrentMap = mapNameE.ToString();
-            state.LastExit = "";
+            if (!state.VagabondModeEnabled)
+            {
+                return (false, false);
+            }
+
+            if (string.IsNullOrEmpty(state.CurrentMap) && mapNameE != RaidLocation.Nil)
+            {
+                state.TransitState = null;
+                state.CurrentMap = mapNameE.ToString();
+                state.LastExit = "";
+            }
+
+            var wasNew = state.IsNewCharacter;
+            state.IsNewCharacter = false;
+            StateService.SaveState(sessionId, state);
+            return (true, wasNew);
+        });
+
+        if (!enabled)
+        {
+            return;
         }
 
         RaidRuntimeState.Entered(sessionId);
 
-        if (VagabondConfig.Config.WipeStashOnFirstRaidEntry && state.IsNewCharacter)
         {
-            VagabondService.WipeItems(
-                sessionId,
-                pmc.CharacterData.PmcData,
-                false,
-                true
-            );
-            VirtualStashService.ClearAllTraderStashes(sessionId);
-            state.IsNewCharacter = false;
-        }
-        else if (VagabondConfig.Config.WipeVirtualStashesOnRaidEntry)
-        {
-            VirtualStashService.ClearAllTraderStashes(sessionId);
+            using var gate = VirtualStashService.AcquireGateScope(sessionId);
+
+            if (VagabondConfig.Config.WipeStashOnFirstRaidEntry && wasNewCharacter)
+            {
+                VagabondService.WipeItems(
+                    sessionId,
+                    pmc.CharacterData.PmcData,
+                    false,
+                    true
+                );
+                VirtualStashService.ClearAllTraderStashes(sessionId);
+            }
+            else if (VagabondConfig.Config.WipeVirtualStashesOnRaidEntry)
+            {
+                VirtualStashService.ClearAllTraderStashes(sessionId);
+            }
         }
 
         if (VagabondConfig.Config.EnableVirtualStashes)
@@ -95,9 +109,6 @@ public sealed class RaidJoinPatch : AbstractPatch
             VirtualStashService.ClearTempStash(sessionId);
         }
 
-        state.IsNewCharacter = false;
-
-        StateService.SaveState(sessionId, state);
         VagabondService.PersistProfileIfPossible(sessionId);
     }
 }

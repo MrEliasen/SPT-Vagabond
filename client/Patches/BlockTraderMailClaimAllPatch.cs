@@ -1,5 +1,7 @@
 using System.Reflection;
 using ChatShared;
+using EFT;
+using EFT.Communications;
 using EFT.UI.Chat;
 using HarmonyLib;
 using SPT.Reflection.Patching;
@@ -11,11 +13,12 @@ public class BlockTraderMailClaimAllPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return AccessTools.Method(typeof(ChatScreen), "method_3", new[] { typeof(DialogueClass) });
+        return AccessTools.Method(typeof(ChatScreen), nameof(ChatScreen.TransferAll),
+            new[] { typeof(UpdatableChatDialogue) });
     }
 
     [PatchPrefix]
-    public static bool Prefix(DialogueClass dialog)
+    public static bool Prefix(UpdatableChatDialogue dialog)
     {
         if (!Vagabond.State.LimitTraderMailAccess)
         {
@@ -33,6 +36,11 @@ public class BlockTraderMailClaimAllPatch : ModulePatch
             return true;
         }
 
+        if (!MongoIdGuard.IsMongoIdFormat(dialog._id))
+        {
+            return true;
+        }
+
         var profile = ClientAppUtils.GetClientApp()?.Session?.Profile;
         if (profile?.TradersInfo == null)
         {
@@ -45,7 +53,28 @@ public class BlockTraderMailClaimAllPatch : ModulePatch
         }
 
         var name = info.Settings?.Nickname?.Localized() ?? "Trader";
-        NotificationManagerClass.DisplayWarningNotification($"{name} is not available at your current location.");
+        NotificationManager.DisplayWarningNotification($"{name} is not available at your current location.");
         return false;
+    }
+}
+
+internal static class MongoIdGuard
+{
+    public static bool IsMongoIdFormat(string id)
+    {
+        if (id == null || id.Length != 24)
+        {
+            return false;
+        }
+
+        foreach (var c in id)
+        {
+            if (!System.Uri.IsHexDigit(c))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
