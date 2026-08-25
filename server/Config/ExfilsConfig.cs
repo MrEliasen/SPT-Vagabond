@@ -13,6 +13,12 @@ public sealed class ExfilsConfigEntry
     public List<CustomExfil> Transits { get; set; } = new();
 }
 
+internal sealed class RawExfilsConfigEntry
+{
+    public List<JsonElement> Extracts { get; set; } = new();
+    public List<JsonElement> Transits { get; set; } = new();
+}
+
 public static class ExfilsConfig
 {
     public static Dictionary<RaidLocation, ExfilsConfigEntry> Maps = new();
@@ -53,6 +59,7 @@ public static class ExfilsConfig
             var options = new JsonSerializerOptions
             {
                 ReadCommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true,
                 PropertyNameCaseInsensitive = true,
                 Converters = { new JsonStringEnumConverter() }
             };
@@ -66,32 +73,30 @@ public static class ExfilsConfig
                     continue;
                 }
 
-                ExfilsConfigEntry? entry;
+                RawExfilsConfigEntry? raw;
                 try
                 {
                     var json = File.ReadAllText(path);
-                    entry = JsonSerializer.Deserialize<ExfilsConfigEntry>(json, options);
+                    raw = JsonSerializer.Deserialize<RawExfilsConfigEntry>(json, options);
                 }
                 catch (Exception ex)
                 {
-                    VagabondLogger.Error($"exfils config: failed to parse {path}: {ex}");
+                    ConfigVerificationService.ReportSkippedRow($"exfils/{Path.GetFileName(path)}", 0, ex.Message);
                     continue;
                 }
 
-                if (entry == null)
+                if (raw == null)
                 {
                     continue;
                 }
 
-                foreach (var extract in entry.Extracts)
+                var entry = new ExfilsConfigEntry
                 {
-                    extract.IsTransit = false;
-                }
-
-                foreach (var transit in entry.Transits)
-                {
-                    transit.IsTransit = true;
-                }
+                    Extracts = ConvertDefinitions(raw.Extracts, options, Path.GetFileName(path), "extracts",
+                        isTransit: false),
+                    Transits = ConvertDefinitions(raw.Transits, options, Path.GetFileName(path), "transits",
+                        isTransit: true)
+                };
 
                 result[raid] = entry;
             }
@@ -102,6 +107,35 @@ public static class ExfilsConfig
         }
 
         return result;
+    }
+
+    private static List<CustomExfil> ConvertDefinitions(List<JsonElement> rows, JsonSerializerOptions options,
+        string fileName, string section, bool isTransit)
+    {
+        var converted = new List<CustomExfil>(rows.Count);
+
+        for (var i = 0; i < rows.Count; i++)
+        {
+            try
+            {
+                var definition = rows[i].Deserialize<CustomExfil>(options);
+                if (definition == null)
+                {
+                    ConfigVerificationService.ReportSkippedRow($"exfils/{fileName} {section}", i, "row is null.");
+                    continue;
+                }
+
+                definition.IsTransit = isTransit;
+                converted.Add(definition);
+            }
+            catch (Exception ex)
+            {
+                ConfigVerificationService.ReportSkippedRow($"exfils/{fileName} {section}", i,
+                    $"{ex.Message} Row content: {rows[i].GetRawText()}");
+            }
+        }
+
+        return converted;
     }
 
     private static bool TryMatchRaid(string fileKey, out RaidLocation raid)

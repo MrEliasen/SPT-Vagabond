@@ -24,6 +24,7 @@ public static class RaidService
     private static bool _exfilPollInFlight;
     private static long _nextExfilPollAtMs;
     private static bool _wasInRaid;
+    private static int _pollGeneration;
 
     public static bool IsInRaid()
     {
@@ -57,11 +58,13 @@ public static class RaidService
             return;
         }
 
-        PollExfilStateAsync();
+        // fire and forget by design
+        _ = PollExfilStateAsync();
     }
 
     private static void StartPolling()
     {
+        _pollGeneration++;
         _exfilPollInFlight = false;
         var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         _nextExfilPollAtMs = ((nowMs / ExfilPollIntervalMs) + 1) * ExfilPollIntervalMs;
@@ -69,6 +72,7 @@ public static class RaidService
 
     private static void StopPolling()
     {
+        _pollGeneration++;
         _exfilPollInFlight = false;
         _nextExfilPollAtMs = 0;
     }
@@ -80,6 +84,7 @@ public static class RaidService
             return;
         }
 
+        var generation = _pollGeneration;
         _exfilPollInFlight = true;
         try
         {
@@ -91,12 +96,20 @@ public static class RaidService
         }
         finally
         {
-            _exfilPollInFlight = false;
+            if (generation == _pollGeneration)
+            {
+                _exfilPollInFlight = false;
+            }
         }
     }
 
     public static void UpdateCurrentRaidExfils()
     {
+        if (CustomExfilPlacementPatch.LocationDesyncedThisRaid)
+        {
+            return;
+        }
+
         if (!IsInRaid())
         {
             return;
@@ -324,7 +337,8 @@ public static class RaidService
     private static EndByExitTrigerScenario ResolveEndByExitScenario(AbstractGame game)
     {
         var field = AccessTools.Field(game.GetType(), "_endByExitTrigerScenario");
-        if (field?.GetValue(game) is EndByExitTrigerScenario scenarioFromField)
+        if (field?.GetValue(game) is EndByExitTrigerScenario scenarioFromField &&
+            (UnityEngine.Object)scenarioFromField != null)
         {
             return scenarioFromField;
         }
@@ -430,25 +444,11 @@ public static class RaidService
     private static void BindStatusUiHandler(AbstractGame game, ExfiltrationPoint point)
     {
         var handlerMethod = game.GetType().GetMethod(
-                                "OnStatusChangedHandler",
-                                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                                null,
-                                new[] { typeof(ExfiltrationPoint), typeof(EExfiltrationStatus) },
-                                null)
-                            ??
-                            game.GetType().GetMethod(
-                                "method_10",
-                                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                                null,
-                                new[] { typeof(ExfiltrationPoint), typeof(EExfiltrationStatus) },
-                                null)
-                            ??
-                            game.GetType().GetMethod(
-                                "method_9",
-                                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                                null,
-                                new[] { typeof(ExfiltrationPoint), typeof(EExfiltrationStatus) },
-                                null);
+            "OnStatusChangedHandler",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            null,
+            new[] { typeof(ExfiltrationPoint), typeof(EExfiltrationStatus) },
+            null);
 
         if (handlerMethod == null)
         {

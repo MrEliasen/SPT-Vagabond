@@ -33,12 +33,14 @@ public sealed class QuestCallbacksAcceptQuestPatch : AbstractPatch
             return response;
         }
 
-        var state = StateService.GetState(sessionID);
-        if (ExfilQuests.List.ContainsKey(info.QuestId) && !state.QuestExfils.Contains(info.QuestId))
+        StateService.WithState(sessionID, state =>
         {
-            state.QuestExfils.Add(info.QuestId);
-            StateService.SaveState(sessionID, state);
-        }
+            if (ExfilQuests.List.ContainsKey(info.QuestId) && !state.QuestExfils.Contains(info.QuestId))
+            {
+                state.QuestExfils.Add(info.QuestId);
+                StateService.SaveState(sessionID, state);
+            }
+        });
 
         return response;
     }
@@ -67,28 +69,30 @@ public sealed class QuestCallbacksCompleteQuestPatch : AbstractPatch
             return response;
         }
 
-        var state = StateService.GetState(sessionID);
-
-        var questId = info.QuestId.ToString();
-
-        if (state.QuestExfils.Contains(questId))
+        StateService.WithState(sessionID, state =>
         {
-            state.QuestExfils.Remove(questId);
-        }
+            var questId = info.QuestId.ToString();
 
-        if (questId == QuestsConfig.RelocationQuestId)
-        {
-            state.CanPlaceHideout = true;
+            if (state.QuestExfils.Contains(questId))
+            {
+                state.QuestExfils.Remove(questId);
+            }
 
-            var pmc = VagabondService.GetPmcProfile(sessionID)?.CharacterData?.PmcData;
-            pmc?.Quests?.RemoveAll(q => q.QId == questId);
-        }
-        else if (QuestsConfig.HideoutTraderByQuestId.TryGetValue(questId, out var traderId))
-        {
-            state.HideoutTraders.Add(traderId);
-        }
+            if (questId == QuestsConfig.RelocationQuestId)
+            {
+                state.CanPlaceHideout = true;
 
-        StateService.SaveState(sessionID, state);
+                var pmc = VagabondService.GetPmcProfile(sessionID)?.CharacterData?.PmcData;
+                pmc?.Quests?.RemoveAll(q => q.QId == questId);
+            }
+            else if (QuestsConfig.HideoutTraderByQuestId.TryGetValue(questId, out var traderId))
+            {
+                state.HideoutTraders.Add(traderId);
+            }
+
+            StateService.SaveState(sessionID, state);
+        });
+
         return response;
     }
 }

@@ -39,19 +39,25 @@ public sealed class ChooseRaidLocationsPatch : AbstractPatch
             return;
         }
 
-        var state = StateService.GetState(sessionId);
-        if (!state.VagabondModeEnabled)
+        // Copy what we need under the session state lock; the response rewrite runs on the copies.
+        var stateSnapshot = StateService.WithState(sessionId, state => state.VagabondModeEnabled
+            ? (state.CurrentMap, state.TransitState?.ToMap, QuestService.BuildExfilList(state))
+            : ((string, string?, Dictionary<string, List<string>>)?)null);
+
+        if (stateSnapshot == null)
         {
             VagabondLogger.Error($"Missing state {sessionId}.");
             return;
         }
 
-        if (string.IsNullOrEmpty(state.CurrentMap) || VagabondConfig.Config.EnablePickRaidLocation)
+        var (stateCurrentMap, transitToMap, questExfils) = stateSnapshot.Value;
+
+        if (string.IsNullOrEmpty(stateCurrentMap) || VagabondConfig.Config.EnablePickRaidLocation)
         {
             return;
         }
 
-        RaidLocation currentMap = VagabondLocations.NormaliseMapName(state.CurrentMap);
+        RaidLocation currentMap = VagabondLocations.NormaliseMapName(stateCurrentMap);
         if (currentMap == RaidLocation.Nil)
         {
             return;
@@ -72,7 +78,7 @@ public sealed class ChooseRaidLocationsPatch : AbstractPatch
 
         HashSet<string> allowedMapIds = new(StringComparer.OrdinalIgnoreCase);
 
-        RaidLocation transitMap = VagabondLocations.NormaliseMapName(state.TransitState?.ToMap);
+        RaidLocation transitMap = VagabondLocations.NormaliseMapName(transitToMap);
         if (transitMap != RaidLocation.Nil)
         {
             if (VagabondLocations.Locations.TryGetValue(transitMap, out var mapIds))
@@ -91,11 +97,9 @@ public sealed class ChooseRaidLocationsPatch : AbstractPatch
             }
         }
 
-        // GroundZero patch
         if (currentMap == RaidLocation.GroundZero || transitMap == RaidLocation.GroundZero)
         {
-            var lvl = pmc.CharacterData.PmcData.Info?.Level ?? 1;
-            var picked = VagabondService.GetGroundZeroMapIdForLevel(lvl);
+            var picked = VagabondService.GetGroundZeroMapIdForSession(sessionId);
 
             allowedMapIds.RemoveWhere(x =>
                 (string.Equals(x, "Sandbox", StringComparison.OrdinalIgnoreCase)
@@ -115,8 +119,6 @@ public sealed class ChooseRaidLocationsPatch : AbstractPatch
                 locations[locationKey] = locations[locationKey] with { Enabled = false };
             }
         }
-
-        var questExfils = QuestService.BuildExfilList(state);
 
         foreach (MongoId locationKey in locations.Keys.ToList())
         {

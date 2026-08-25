@@ -16,13 +16,16 @@ namespace Vagabond.Server.Routes;
 [Injectable]
 public class VagabondRouter(
     JsonUtil jsonUtil) : StaticRouter(jsonUtil, [
-    new RouteAction<EmptyRequestData>(
+
+    new RouteAction(
         "/vagabond/sync/state",
-        (_, _, sessionID, _, _) =>
+        (_, info, sessionID, _, _) =>
         {
-            return ValueTask.FromResult(jsonUtil.Serialize(HandleSyncStateRoute(sessionID)) ??
-                                        throw new NullReferenceException("Could not serialize sync response"));
-        }
+            return ValueTask.FromResult<object>(
+                jsonUtil.Serialize(HandleSyncStateRoute(sessionID, info as SyncStateServerRequest)) ??
+                throw new NullReferenceException("Could not serialize sync response"));
+        },
+        typeof(SyncStateServerRequest)
     ),
     new RouteAction<GetExfilDataServerRequest>(
         "/vagabond/sync/exfils",
@@ -43,14 +46,14 @@ public class VagabondRouter(
     ),
 ])
 {
-    private static SyncStateResponse HandleSyncStateRoute(MongoId sessionId)
+    private static SyncStateResponse HandleSyncStateRoute(MongoId sessionId, SyncStateServerRequest? payload)
     {
         var response = new SyncStateResponse
         {
             CurrentMap = ""
         };
 
-        if (!VagabondService.IsInRaid(sessionId))
+        if (payload?.InRaid == false)
         {
             RaidRuntimeState.Left(sessionId);
         }
@@ -58,6 +61,12 @@ public class VagabondRouter(
         if (!VagabondService.ShouldApplyVagabondRules(sessionId))
         {
             response.CustomExfils = ExfilService.BuildCustomExfilSnapshot();
+
+            if (VagabondService.IsHeadlessSession(sessionId))
+            {
+                response.QuestExfils = BuildHeadlessQuestExfilUnion(sessionId);
+            }
+
             return response;
         }
 
@@ -69,46 +78,86 @@ public class VagabondRouter(
             return response;
         }
 
-        var state = StateService.GetState(sessionId);
-        // load their hideout first time
-        if (ExfilService.AddHideoutExfil(pmc.CharacterData.PmcData, state))
+        var pmcData = pmc.CharacterData.PmcData;
+        StateService.WithState(sessionId, state =>
         {
-            ExfilService.BuildCustomExfilSnapshot(true);
-        }
+            // load their hideout first time
+            if (ExfilService.AddHideoutExfil(pmcData, state))
+            {
+                ExfilService.BuildCustomExfilSnapshot(true);
+            }
 
-        response.CustomExfils = ExfilService.BuildCustomExfilSnapshot();
-        response.QuestExfils = QuestService.BuildExfilList(state);
-        response.AllowPostRaidHealing = VagabondConfig.Config.AllowPostRaidHealing;
-        response.ResetOnDeath = VagabondConfig.Config.ResetOnDeath;
-        response.WipeFirstRaid = VagabondConfig.Config.WipeStashOnFirstRaidEntry;
-        response.CurrentMap = VagabondService.GetCurrentRaidId(sessionId, state);
-        response.NewCharacter = string.IsNullOrEmpty(state.CurrentMap);
-        response.LimitTraderMailAccess = VagabondConfig.Config.LimitTraderMailAccess;
-        response.RaidFirItems = state.RaidFirItems ?? new HashSet<string>();
+            response.CustomExfils = ExfilService.BuildCustomExfilSnapshot();
+            response.QuestExfils = QuestService.BuildExfilList(state);
+            response.AllowPostRaidHealing = VagabondConfig.Config.AllowPostRaidHealing;
+            response.ResetOnDeath = VagabondConfig.Config.ResetOnDeath;
+            response.WipeFirstRaid = VagabondConfig.Config.WipeStashOnFirstRaidEntry;
+            response.VirtualStashes = VagabondConfig.Config.EnableVirtualStashes;
+            response.CurrentMap = VagabondService.GetCurrentRaidId(sessionId, state);
+            response.NewCharacter = string.IsNullOrEmpty(state.CurrentMap);
+            response.LimitTraderMailAccess = VagabondConfig.Config.LimitTraderMailAccess;
+            response.RaidFirItems = state.RaidFirItems != null
+                ? new HashSet<string>(state.RaidFirItems)
+                : new HashSet<string>();
+        });
 
         var ownerSessionId = FikaAdapter.GetRaidOwnerSessionId(sessionId);
-        var ownerState = ownerSessionId == sessionId ? state : StateService.GetState(ownerSessionId);
+        var (ownerCurrentMap, ownerLastExtractMap, ownerStreak) = StateService.WithState(ownerSessionId,
+            s => (s.CurrentMap, s.LastExtractMap, s.ConsecutiveExtractsSameMap));
 
         response.LootStreakEnabled = VagabondConfig.Config.EnableConsecutiveMapLootReduction;
-        response.LootStreakMultiplier = LootStreakService.GetCurrentMultiplier(ownerSessionId, ownerState.CurrentMap);
+        response.LootStreakMultiplier = LootStreakService.GetCurrentMultiplier(ownerSessionId, ownerCurrentMap);
         response.LootStreakCount =
-            LootStreakService.GetStreakMapName(ownerState.CurrentMap) == ownerState.LastExtractMap
-                ? ownerState.ConsecutiveExtractsSameMap
+            LootStreakService.GetStreakMapName(ownerCurrentMap) == ownerLastExtractMap
+                ? ownerStreak
                 : 0;
 
         return response;
     }
 
+    private static Dictionary<string, List<string>> BuildHeadlessQuestExfilUnion(MongoId headlessSessionId)
+    {
+        var members = FikaAdapter.GetHeadlessMatchMemberSessionIds(headlessSessionId);
+        if (members == null || members.Count == 0)
+        {
+            var requester = FikaAdapter.GetRaidOwnerSessionId(headlessSessionId);
+            members = requester == headlessSessionId
+                ? Array.Empty<MongoId>()
+                : new[] { requester };
+        }
+
+        var questIds = new HashSet<string>();
+        foreach (var member in members)
+        {
+            if (member == headlessSessionId)
+            {
+                continue;
+            }
+
+            // skips headless entries, unknown ids (scav-side fika player ids) and missing profiles.
+            if (!VagabondService.ShouldApplyVagabondRules(member))
+            {
+                continue;
+            }
+
+            var memberQuestIds = StateService.WithState(member, state => state.QuestExfils.ToList());
+            questIds.UnionWith(memberQuestIds);
+        }
+
+        return QuestService.BuildExfilList(questIds);
+    }
+
     private static SyncExfilResponse HandleSyncExfilRoute(MongoId _, GetExfilDataServerRequest payload)
     {
+        var (version, snapshot) = ExfilService.GetSnapshotWithVersion();
         var response = new SyncExfilResponse
         {
-            Version = ExfilService.SnapshotCacheVersion,
+            Version = version,
         };
 
-        if (payload.Version != ExfilService.SnapshotCacheVersion)
+        if (payload.Version != version)
         {
-            response.CustomExfils = ExfilService.BuildCustomExfilSnapshot();
+            response.CustomExfils = snapshot;
         }
 
         return response;
@@ -131,46 +180,49 @@ public class VagabondRouter(
             return response;
         }
 
-        var state = StateService.GetState(sessionId);
-
-        if (state.HideoutState != null && (!VagabondConfig.Config.AllowHideoutRelocation && !state.CanPlaceHideout))
+        var pmcData = pmc.CharacterData.PmcData;
+        StateService.WithState(sessionId, state =>
         {
-            response.Success = false;
-            response.Message =
-                $"You have already established your hideout in {VagabondLocations.ToHumanName(VagabondLocations.NormaliseMapName(state.HideoutState.Map))}. Talk to Skier to relocate your hideout.";
-            return response;
-        }
-
-        var mapName = !string.IsNullOrWhiteSpace(payload.LocationId)
-            ? payload.LocationId
-            : VagabondService.GetCurrentRaidId(sessionId, state);
-
-        if (state.HideoutState == null)
-        {
-            state.HideoutState = new HideoutState
+            if (state.HideoutState != null && (!VagabondConfig.Config.AllowHideoutRelocation && !state.CanPlaceHideout))
             {
-                // if we do not keep the same ID, any virtual stashes tied to that hideout disappear
-                Id = String.Format("{0:X}", sessionId.GetHashCode()),
-            };
-        }
+                response.Success = false;
+                response.Message =
+                    $"You have already established your hideout in {VagabondLocations.ToHumanName(VagabondLocations.NormaliseMapName(state.HideoutState.Map))}. Talk to Skier to relocate your hideout.";
+                return;
+            }
 
-        ExfilService.RemoveHideout(state.HideoutState);
+            var mapName = !string.IsNullOrWhiteSpace(payload.LocationId)
+                ? payload.LocationId
+                : VagabondService.GetCurrentRaidId(sessionId, state);
 
-        state.CanPlaceHideout = false;
-        state.HideoutState.Map = mapName;
-        state.HideoutState.X = payload.X;
-        state.HideoutState.Y = payload.Y;
-        state.HideoutState.Z = payload.Z;
-        state.HideoutState.R = payload.R;
+            if (state.HideoutState == null)
+            {
+                state.HideoutState = new HideoutState
+                {
+                    // if we do not keep the same ID, any virtual stashes tied to that hideout disappear
+                    Id = String.Format("{0:X}", sessionId.GetHashCode()),
+                };
+            }
 
-        ExfilService.AddHideoutExfil(pmc.CharacterData.PmcData, state);
-        ExfilService.BuildCustomExfilSnapshot(true);
+            ExfilService.RemoveHideout(state.HideoutState);
 
-        StateService.SaveState(sessionId, state);
-        response.Success = true;
-        response.CurrentRaid = mapName;
-        response.MapName = mapName;
-        response.Message = "Establishing hideout, please wait...";
+            state.CanPlaceHideout = false;
+            state.HideoutState.Map = mapName;
+            state.HideoutState.X = payload.X;
+            state.HideoutState.Y = payload.Y;
+            state.HideoutState.Z = payload.Z;
+            state.HideoutState.R = payload.R;
+
+            ExfilService.AddHideoutExfil(pmcData, state);
+            ExfilService.BuildCustomExfilSnapshot(true);
+
+            StateService.SaveState(sessionId, state);
+            response.Success = true;
+            response.CurrentRaid = mapName;
+            response.MapName = mapName;
+            response.Message = "Establishing hideout, please wait...";
+        });
+
         return response;
     }
 }

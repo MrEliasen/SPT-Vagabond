@@ -11,7 +11,7 @@ namespace Vagabond.Client.Patches;
 
 internal class ABPSPmcDistancePatch : ModulePatch
 {
-    private static FieldInfo _reservedSpawnPositionsField;
+    private static HashSet<Vector3> _reservedSpawnPositions;
 
     protected override MethodBase GetTargetMethod()
     {
@@ -19,9 +19,9 @@ internal class ABPSPmcDistancePatch : ModulePatch
                    ?? AccessTools.TypeByName("acidphantasm_botplacementsystem.Patches.PmcSpawnHookPatch");
 
         var utilityType = AccessTools.TypeByName("BotPlacementSystemClient.Utils.Utility");
-        _reservedSpawnPositionsField = utilityType == null
+        _reservedSpawnPositions = utilityType == null
             ? null
-            : AccessTools.Field(utilityType, "ReservedSpawnPositions");
+            : AccessTools.Field(utilityType, "ReservedSpawnPositions")?.GetValue(null) as HashSet<Vector3>;
 
         return AccessTools.Method(
             type,
@@ -50,9 +50,9 @@ internal class ABPSPmcDistancePatch : ModulePatch
             return true;
         }
 
-        if (_reservedSpawnPositionsField?.GetValue(null) is IEnumerable<Vector3> reservedPositions)
+        if (_reservedSpawnPositions != null)
         {
-            foreach (var reservedPosition in reservedPositions)
+            foreach (var reservedPosition in _reservedSpawnPositions)
             {
                 if (Vector3.Distance(spawnPoint.Position, reservedPosition) < distance)
                 {

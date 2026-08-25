@@ -15,14 +15,19 @@ public static class QuestService
 {
     public static Dictionary<string, List<string>> BuildExfilList(VagabondSessionState state)
     {
+        return BuildExfilList(state.QuestExfils);
+    }
+
+    public static Dictionary<string, List<string>> BuildExfilList(IReadOnlyCollection<string> questIds)
+    {
         Dictionary<string, List<string>> exfilList = new();
 
-        if (state.QuestExfils.Count == 0)
+        if (questIds.Count == 0)
         {
             return exfilList;
         }
 
-        foreach (var quests in state.QuestExfils)
+        foreach (var quests in questIds)
         {
             ExfilQuests.List.TryGetValue(quests, out var list);
             if (list == null)

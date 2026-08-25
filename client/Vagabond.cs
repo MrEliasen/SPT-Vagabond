@@ -64,8 +64,7 @@ public class Vagabond : BaseUnityPlugin
         new KeepFirStatusPatch().Enable();
 
         TryEnableAbpsCompatibilityPatches();
-
-        new LocalGameStopPatch().Enable();
+        
         new MenuShowPatch().Enable();
 
         if (IsHeadless())
@@ -131,6 +130,9 @@ public class Vagabond : BaseUnityPlugin
         {
             return;
         }
+
+        ActiveHealthControllerPatch.UpdateFallDamageArming();
+        ExfilService.ResolvePendingSpawnOverlapSuppression();
 
         if (_hideoutPlacementArmed && Time.realtimeSinceStartup > _hideoutPlacementArmExpiresAt)
         {
@@ -241,12 +243,13 @@ public class Vagabond : BaseUnityPlugin
 
             var pos = player.Position;
             var yaw = player.Transform.eulerAngles.y;
-            var csharpLine = string.Format(
+            var csharpLine = string.Join(
+                Environment.NewLine,
                 "{",
                 $"    \"x\": {pos.x:0.###},",
                 $"    \"y\": {pos.y:0.###},",
                 $"    \"z\": {pos.z:0.###},",
-                $"    \"rotationY\": {yaw:0.###},",
+                $"    \"rotationY\": {yaw:0.###}",
                 "},"
             );
             File.AppendAllText(_locationDumpPath, csharpLine + Environment.NewLine);

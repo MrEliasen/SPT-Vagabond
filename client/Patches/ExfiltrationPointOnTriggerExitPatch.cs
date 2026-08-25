@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+using System.Reflection;
+using Comfort.Common;
+using EFT;
 using EFT.Interactive;
 using SPT.Reflection.Patching;
 using UnityEngine;
@@ -18,8 +20,14 @@ internal class ExfiltrationPointOnTriggerExitPatch : ModulePatch
     [PatchPostfix]
     private static void Postfix(ExfiltrationPoint __instance, Collider col)
     {
-        // as soon as they leave their infil
-        ActiveHealthControllerPatch.EnableFallDamage = true;
+        var gameWorld = Singleton<GameWorld>.Instance;
+        var player = gameWorld?.GetPlayerByCollider(col);
+        var mainPlayer = gameWorld?.MainPlayer;
+        if (player != null && mainPlayer != null && ReferenceEquals(player, mainPlayer))
+        {
+            ActiveHealthControllerPatch.EnableFallDamage = true;
+        }
+
         ExfilService.ClearSpawnOverlapSuppression(__instance, col);
     }
 }

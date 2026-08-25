@@ -46,15 +46,17 @@ public sealed class MailAttachmentsPatch : AbstractPatch
             return true;
         }
 
-        var senderState = StateService.GetState(senderDetails.Id);
-        var recipientState = StateService.GetState(messageDetails.RecipientId);
+        var (senderMap, senderExit) = StateService.WithState(senderDetails.Id,
+            s => (s.CurrentMap, s.LastExit));
+        var (recipientMap, recipientExit) = StateService.WithState(messageDetails.RecipientId,
+            s => (s.CurrentMap, s.LastExit));
 
-        if (string.IsNullOrEmpty(senderState.CurrentMap))
+        if (string.IsNullOrEmpty(senderMap))
         {
             return false;
         }
 
-        if (senderState.CurrentMap != recipientState.CurrentMap)
+        if (senderMap != recipientMap)
         {
             return false;
         }
@@ -64,6 +66,6 @@ public sealed class MailAttachmentsPatch : AbstractPatch
             return true;
         }
 
-        return !string.IsNullOrEmpty(senderState.LastExit) && senderState.LastExit == recipientState.LastExit;
+        return !string.IsNullOrEmpty(senderExit) && senderExit == recipientExit;
     }
 }

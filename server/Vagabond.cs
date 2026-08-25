@@ -116,6 +116,7 @@ public sealed class VagabondDbLoader : IOnLoad
     private readonly EventOutputHolder _eventOutputHolder;
     private readonly LocationTable _locationTable;
     private readonly TemplateTable _templateTable;
+    private readonly TradersTable _tradersTable;
     private readonly LocaleTable _localeTable;
     private readonly MailSendService _mailSendService;
     private readonly LocationController _locationController;
@@ -131,6 +132,7 @@ public sealed class VagabondDbLoader : IOnLoad
         ProfileDataService profileDataService,
         LocationTable locationTable,
         TemplateTable templateTable,
+        TradersTable tradersTable,
         LocaleTable localeTable,
         SaveServer saveServer,
         InventoryHelper invHelper,
@@ -154,6 +156,7 @@ public sealed class VagabondDbLoader : IOnLoad
         _customQuestService = customQuestService;
         _locationTable = locationTable;
         _templateTable = templateTable;
+        _tradersTable = tradersTable;
         _localeTable = localeTable;
         _localeService = localeService;
         _jsonUtil = jsonUtil;
@@ -177,6 +180,7 @@ public sealed class VagabondDbLoader : IOnLoad
         ReflectionUtil.Register(_jsonUtil);
         ReflectionUtil.Register(_cloner);
         ExfilService.Apply(_locationTable);
+        ConfigVerificationService.VerifyAgainstDatabase(_tradersTable);
 
         if (FikaAdapter.Init(_services))
         {
@@ -285,6 +289,8 @@ public class GameChanges(
         }
 
         QuestService.LoadQuests();
+
+        ConfigVerificationService.LogSummary();
 
         return Task.CompletedTask;
     }

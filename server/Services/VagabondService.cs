@@ -33,21 +33,27 @@ internal static class VagabondService
             return;
         }
 
-        var state = StateService.GetState(sessionId);
-        state.ResetProfile = false;
-
         RaidRuntimeState.Left(sessionId);
+
+        using var gate = VirtualStashService.AcquireGateScope(sessionId);
+
         VirtualStashService.ClearAllTraderStashes(sessionId);
         WipeItems(sessionId, pmc, true, true, true);
 
-        state.CurrentMap = VagabondConfig.Config.StartRaid;
-        state.LastExit = VagabondConfig.Config.StartExfilIdentifier;
-        state.TransitState = null;
-        ExfilService.RemoveHideout(state.HideoutState);
-        state.HideoutState = null;
-        state.CanPlaceHideout = true;
-        HideoutService.UpdateTraderAccess(pmc, state);
-        StateService.SaveState(sessionId, state);
+        StateService.WithState(sessionId, state =>
+        {
+            state.ResetProfile = false;
+            var (startRaid, startExfil) = VagabondConfig.GetStartLocation();
+            state.CurrentMap = startRaid;
+            state.LastExit = startExfil;
+            state.TransitState = null;
+            ExfilService.RemoveHideout(state.HideoutState);
+            state.HideoutState = null;
+            state.CanPlaceHideout = true;
+            HideoutService.UpdateTraderAccess(pmc, state);
+            StateService.SaveState(sessionId, state);
+        });
+
         using var stashState = VirtualStashService.OpenStash(sessionId, pmc);
         AddMoney(sessionId, pmc);
     }
@@ -78,17 +84,20 @@ internal static class VagabondService
                 return;
             }
 
-            _ = Task.Run(async () =>
+            using (ExecutionContext.SuppressFlow())
             {
-                try
+                _ = Task.Run(async () =>
                 {
-                    await server.SaveProfileAsync(sessionId).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    VagabondLogger.Error($"PersistProfileIfPossible failed: {ex}");
-                }
-            });
+                    try
+                    {
+                        await server.SaveProfileAsync(sessionId).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        VagabondLogger.Error($"PersistProfileIfPossible failed: {ex}");
+                    }
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -218,6 +227,24 @@ internal static class VagabondService
         }
     }
 
+    public static bool IsHeadlessSession(MongoId sessionId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                return false;
+            }
+
+            var pmc = GetPmcProfile(sessionId);
+            return pmc?.ProfileInfo?.Username?.StartsWith("headless_") ?? false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
 
     public static void AddMoney(MongoId sessionId, PmcData pmcData)
     {
@@ -251,6 +278,21 @@ internal static class VagabondService
             };
 
             invHelper.AddItemToStash(sessionId, request, pmcData, eventOutputHolder.GetOutput(sessionId));
+        }
+    }
+
+    public static string GetGroundZeroMapIdForSession(MongoId sessionId)
+    {
+        var hostSessionId = FikaAdapter.GetMatchHostSessionId(sessionId);
+        try
+        {
+            var lvl = GetPmcProfile(hostSessionId)?.CharacterData?.PmcData?.Info?.Level ?? 1;
+            return GetGroundZeroMapIdForLevel(lvl);
+        }
+        catch (Exception)
+        {
+            var lvl = GetPmcProfile(sessionId)?.CharacterData?.PmcData?.Info?.Level ?? 1;
+            return GetGroundZeroMapIdForLevel(lvl);
         }
     }
 
@@ -307,12 +349,10 @@ internal static class VagabondService
             }
         }
 
-        // GroundZero fix
         var effective = transitMap != RaidLocation.Nil ? transitMap : currentMap;
         if (effective == RaidLocation.GroundZero)
         {
-            var lvl = GetPmcProfile(sessionId)?.CharacterData?.PmcData?.Info?.Level ?? 1;
-            return GetGroundZeroMapIdForLevel(lvl);
+            return GetGroundZeroMapIdForSession(sessionId);
         }
 
         return allowedMapIds.First();

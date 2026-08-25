@@ -18,15 +18,35 @@ public sealed class ItemEventRouterHandleEventsPatch : AbstractPatch
     }
 
     [PatchPrefix]
-    public static void Prefix(MongoId sessionID, out IDisposable __state)
+    public static void Prefix(MongoId sessionID, out EventScope __state)
     {
-        __state = VirtualStashService.OpenStash(sessionID);
+        var gateScope = VirtualStashService.AcquireGateScope(sessionID);
+        try
+        {
+            __state = new EventScope(VirtualStashService.OpenStash(sessionID), gateScope);
+        }
+        catch
+        {
+            gateScope.Dispose();
+            throw;
+        }
     }
 
     [PatchPostfix]
-    public static void Postfix(ref ValueTask<string> __result, IDisposable __state)
+    public static void Postfix(ref ValueTask<string> __result, EventScope __state)
     {
         __result = AttachCleanup(__result, __state);
+    }
+
+    [PatchFinalizer]
+    public static Exception? Finalizer(Exception? __exception, EventScope? __state)
+    {
+        if (__exception != null)
+        {
+            __state?.Dispose();
+        }
+
+        return __exception;
     }
 
     private static async ValueTask<string> AttachCleanup(
@@ -40,6 +60,36 @@ public sealed class ItemEventRouterHandleEventsPatch : AbstractPatch
         finally
         {
             scope.Dispose();
+        }
+    }
+
+    public sealed class EventScope : IDisposable
+    {
+        private readonly IDisposable _stashScope;
+        private readonly IDisposable _gateScope;
+        private int _disposed;
+
+        internal EventScope(IDisposable stashScope, IDisposable gateScope)
+        {
+            _stashScope = stashScope;
+            _gateScope = gateScope;
+        }
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _stashScope.Dispose();
+            }
+            finally
+            {
+                _gateScope.Dispose();
+            }
         }
     }
 }
@@ -58,9 +108,9 @@ public sealed class TradeHelperBuyItemPatch : AbstractPatch
     }
 
     [PatchFinalizer]
-    public static Exception? Finalizer(Exception? __exception, IDisposable __state)
+    public static Exception? Finalizer(Exception? __exception, IDisposable? __state)
     {
-        __state.Dispose();
+        __state?.Dispose();
         return __exception;
     }
 }
@@ -79,9 +129,9 @@ public sealed class TradeHelperSellItemPatch : AbstractPatch
     }
 
     [PatchFinalizer]
-    public static Exception? Finalizer(Exception? __exception, IDisposable __state)
+    public static Exception? Finalizer(Exception? __exception, IDisposable? __state)
     {
-        __state.Dispose();
+        __state?.Dispose();
         return __exception;
     }
 }
@@ -100,9 +150,9 @@ public sealed class PaymentServicePayMoneyPatch : AbstractPatch
     }
 
     [PatchFinalizer]
-    public static Exception? Finalizer(Exception? __exception, IDisposable __state)
+    public static Exception? Finalizer(Exception? __exception, IDisposable? __state)
     {
-        __state.Dispose();
+        __state?.Dispose();
         return __exception;
     }
 }
@@ -121,9 +171,9 @@ public sealed class InventoryHelperAddItemsToStashPatch : AbstractPatch
     }
 
     [PatchFinalizer]
-    public static Exception? Finalizer(Exception? __exception, IDisposable __state)
+    public static Exception? Finalizer(Exception? __exception, IDisposable? __state)
     {
-        __state.Dispose();
+        __state?.Dispose();
         return __exception;
     }
 }
@@ -142,9 +192,9 @@ public sealed class InventoryHelperAddItemToStashPatch : AbstractPatch
     }
 
     [PatchFinalizer]
-    public static Exception? Finalizer(Exception? __exception, IDisposable __state)
+    public static Exception? Finalizer(Exception? __exception, IDisposable? __state)
     {
-        __state.Dispose();
+        __state?.Dispose();
         return __exception;
     }
 }
@@ -163,9 +213,9 @@ public sealed class InventoryHelperCanPlaceItemsInInventoryPatch : AbstractPatch
     }
 
     [PatchFinalizer]
-    public static Exception? Finalizer(Exception? __exception, IDisposable __state)
+    public static Exception? Finalizer(Exception? __exception, IDisposable? __state)
     {
-        __state.Dispose();
+        __state?.Dispose();
         return __exception;
     }
 }

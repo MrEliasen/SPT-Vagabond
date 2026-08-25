@@ -30,4 +30,14 @@ public class VagabondLogger
     {
         _logger?.Success($"[Vagabond] {message}");
     }
+
+    public static void Critical(string message)
+    {
+        _logger?.Critical($"[Vagabond] {message}");
+    }
+
+    public static void Debug(string message)
+    {
+        _logger?.Debug($"[Vagabond] {message}");
+    }
 }

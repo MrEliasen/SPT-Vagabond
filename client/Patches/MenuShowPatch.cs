@@ -45,7 +45,10 @@ internal class MenuShowPatch : ModulePatch
 
         if (!Vagabond.State.HasShownWarningMessage && Vagabond.State.NewCharacter)
         {
-            var message = Messages.FirstWarning(Vagabond.State.WipeFirstRaid, Vagabond.State.ResetOnDeath);
+            var message = Messages.FirstWarning(
+                Vagabond.State.WipeFirstRaid,
+                Vagabond.State.ResetOnDeath,
+                Vagabond.State.VirtualStashes);
             if (message != "")
             {
                 UIMessageService.Instance.ShowMessage(message);
@@ -53,7 +56,13 @@ internal class MenuShowPatch : ModulePatch
             }
         }
 
-        if (Vagabond.State.IsRefreshing || (DateTime.UtcNow - Vagabond.State.LastRefreshUtc).TotalSeconds < 30)
+        if (Vagabond.State.IsRefreshing)
+        {
+            return;
+        }
+
+        if (!CommunicationService.HasUnsentInRaidStatus()
+            && (DateTime.UtcNow - Vagabond.State.LastRefreshUtc).TotalSeconds < 30)
         {
             return;
         }

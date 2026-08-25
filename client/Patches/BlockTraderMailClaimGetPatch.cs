@@ -45,8 +45,7 @@ public class BlockTraderMailClaimGetPatch : ModulePatch
             return true;
         }
 
-        // TradersInfo is keyed by MongoID; its string conversion throws on non-24-char ids
-        if (traderId.Length != 24)
+        if (!MongoIdGuard.IsMongoIdFormat(traderId))
         {
             return true;
         }

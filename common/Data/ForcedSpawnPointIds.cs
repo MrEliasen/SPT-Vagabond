@@ -10,7 +10,14 @@ public static class ForcedSpawnPointIds
                spawnPointId.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase);
     }
 
-    public static string Build(string locationName, string templateId)
+    public static bool IsForcedSpawnIdForSession(string? spawnPointId, string? sessionId)
+    {
+        return IsForcedSpawnId(spawnPointId) &&
+               !string.IsNullOrWhiteSpace(sessionId) &&
+               spawnPointId!.EndsWith(SessionSuffix(sessionId!), StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string Build(string locationName, string templateId, string? sessionId)
     {
         var safeLocationName = string.IsNullOrWhiteSpace(locationName)
             ? "unknown"
@@ -20,6 +27,15 @@ public static class ForcedSpawnPointIds
             ? "template"
             : templateId.Trim().Replace(' ', '_');
 
-        return $"{Prefix}{safeLocationName}_{safeTemplateId}";
+        return $"{Prefix}{safeLocationName}_{safeTemplateId}{SessionSuffix(sessionId)}";
+    }
+
+    private static string SessionSuffix(string? sessionId)
+    {
+        var safeSessionId = string.IsNullOrWhiteSpace(sessionId)
+            ? "unknown"
+            : sessionId!.Trim().Replace(' ', '_');
+
+        return $"__{safeSessionId}";
     }
 }

@@ -13,8 +13,7 @@
     //  Lighthouse,
     //  Reserve,
     //  Shoreline,
-    //  Labs,
-    //  Labyrinth
+    //  Labs
     "raid": "GroundZero",
     // this is Identifier of the exfil which gives you access to the trader
     "exfilIdentifier": "VGB_EXT_THERAPIST"

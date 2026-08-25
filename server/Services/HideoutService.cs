@@ -18,23 +18,27 @@ internal static class HideoutService
     private static readonly List<string> IgnoredTraders =
     [
         "656f0f98d80a697f855d34b1", // BTR Driver
-        "688246518448b05efd61d461", // Mr. Kerman
         "638f541a29ffd1183d187f57", // Lightkeeper
-        "68fe15990f29ba3fdbba9d55", // Radio station
-        "68fe15910f29ba3fdbba9d54", // Taran
-        "688246958448b05efd61d462", // Voevoda
+        "6617beeaa9cfa777ca915b7c", // Ref
+        "6864e812f9fe664cb8b8e152", // Storyteller
     ];
 
-    public static List<TraderLocation> TraderLocations = new();
+    private static readonly Lock TraderLocationsLock = new();
+    private static volatile List<TraderLocation> _traderLocations = new();
+
+    public static IReadOnlyList<TraderLocation> TraderLocations => _traderLocations;
 
     public static void LoadTraderLocations(IEnumerable<TraderLocation> seed)
     {
-        TraderLocations = new List<TraderLocation>(seed);
+        lock (TraderLocationsLock)
+        {
+            _traderLocations = new List<TraderLocation>(seed);
+        }
     }
 
     public static IReadOnlyCollection<string> GetAllTraderIds()
     {
-        return TraderLocations
+        return _traderLocations
             .Select(x => x.TraderId)
             .Distinct(StringComparer.Ordinal)
             .ToArray();
@@ -48,7 +52,7 @@ internal static class HideoutService
             return null;
         }
 
-        return TraderLocations.FirstOrDefault(x =>
+        return _traderLocations.FirstOrDefault(x =>
             x.Raid == raid
             && string.Equals(x.ExfilIdentifier, state.LastExit, StringComparison.OrdinalIgnoreCase))?.TraderId;
     }
@@ -61,7 +65,7 @@ internal static class HideoutService
             return [];
         }
 
-        return TraderLocations
+        return _traderLocations
             .Where(x => x.Raid == raid
                         && string.Equals(x.ExfilIdentifier, state.LastExit, StringComparison.OrdinalIgnoreCase))
             .Select(x => x.TraderId)
@@ -71,7 +75,7 @@ internal static class HideoutService
 
     public static IReadOnlyCollection<string> GetStashKeys()
     {
-        return TraderLocations
+        return _traderLocations
             .Select(x => x.ExfilIdentifier)
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -126,23 +130,21 @@ internal static class HideoutService
         }
     }
 
-    /// <summary>
-    /// API: add or replace trader locations. Entries with an ExfilIdentifier matching an existing one replace it.
-    /// </summary>
     internal static void AddTraderLocations(List<TraderLocation> extractions)
     {
-        var newTraderLocations = new List<TraderLocation>(extractions);
+        lock (TraderLocationsLock)
+        {
+            var ids = new HashSet<string>(
+                extractions.Select(t => t.ExfilIdentifier),
+                StringComparer.OrdinalIgnoreCase);
 
-        var ids = new HashSet<string>(
-            newTraderLocations.Select(t => t.ExfilIdentifier),
-            StringComparer.OrdinalIgnoreCase);
-        TraderLocations.RemoveAll(x => ids.Contains(x.ExfilIdentifier));
-        TraderLocations.AddRange(newTraderLocations);
+            var updated = new List<TraderLocation>(_traderLocations);
+            updated.RemoveAll(x => ids.Contains(x.ExfilIdentifier));
+            updated.AddRange(extractions);
+            _traderLocations = updated;
+        }
     }
 
-    /// <summary>
-    /// API: remove a trader location by ExfilIdentifier. Returns true if removed.
-    /// </summary>
     internal static bool RemoveTraderLocation(string exfilIdentifier)
     {
         if (string.IsNullOrWhiteSpace(exfilIdentifier))
@@ -150,19 +152,23 @@ internal static class HideoutService
             return false;
         }
 
-        return TraderLocations.RemoveAll(x =>
-            string.Equals(x.ExfilIdentifier, exfilIdentifier, StringComparison.OrdinalIgnoreCase)) > 0;
+        lock (TraderLocationsLock)
+        {
+            var updated = new List<TraderLocation>(_traderLocations);
+            var removed = updated.RemoveAll(x =>
+                string.Equals(x.ExfilIdentifier, exfilIdentifier, StringComparison.OrdinalIgnoreCase)) > 0;
+            if (removed)
+            {
+                _traderLocations = updated;
+            }
+
+            return removed;
+        }
     }
 
-    /// <summary>
-    /// API: returns all current registered trader locations.
-    /// </summary>
     internal static IReadOnlyList<TraderLocation> GetTraderLocations()
-        => TraderLocations.AsReadOnly();
+        => _traderLocations.AsReadOnly();
 
-    /// <summary>
-    /// API: add trader IDs to the player's HideoutTraders list.
-    /// </summary>
     internal static void AddHideoutTraders(string sessionId, List<string> traderIds)
     {
         if (string.IsNullOrWhiteSpace(sessionId) || traderIds.Count == 0)
@@ -170,30 +176,29 @@ internal static class HideoutService
             return;
         }
 
-        var state = StateService.GetState(sessionId);
-        var changed = false;
-        foreach (var id in traderIds)
+        StateService.WithState(sessionId, state =>
         {
-            if (string.IsNullOrWhiteSpace(id))
+            var changed = false;
+            foreach (var id in traderIds)
             {
-                continue;
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    continue;
+                }
+
+                if (state.HideoutTraders.Add(id))
+                {
+                    changed = true;
+                }
             }
 
-            if (state.HideoutTraders.Add(id))
+            if (changed)
             {
-                changed = true;
+                StateService.SaveState(sessionId, state);
             }
-        }
-
-        if (changed)
-        {
-            StateService.SaveState(sessionId, state);
-        }
+        });
     }
 
-    /// <summary>
-    /// API: remove trader IDs from the player's HideoutTraders list.
-    /// </summary>
     internal static bool RemoveHideoutTraders(string sessionId, List<string> traderIds)
     {
         if (string.IsNullOrWhiteSpace(sessionId) || traderIds.Count == 0)
@@ -201,32 +206,31 @@ internal static class HideoutService
             return false;
         }
 
-        var state = StateService.GetState(sessionId);
-        var wasRemoved = false;
-        foreach (var id in traderIds)
+        return StateService.WithState(sessionId, state =>
         {
-            if (string.IsNullOrWhiteSpace(id))
+            var wasRemoved = false;
+            foreach (var id in traderIds)
             {
-                continue;
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    continue;
+                }
+
+                if (state.HideoutTraders.Remove(id))
+                {
+                    wasRemoved = true;
+                }
             }
 
-            if (state.HideoutTraders.Remove(id))
+            if (wasRemoved)
             {
-                wasRemoved = true;
+                StateService.SaveState(sessionId, state);
             }
-        }
 
-        if (wasRemoved)
-        {
-            StateService.SaveState(sessionId, state);
-        }
-
-        return wasRemoved;
+            return wasRemoved;
+        });
     }
 
-    /// <summary>
-    /// API: returns the list of trader ID's in the player's HideoutTraders.
-    /// </summary>
     internal static IReadOnlyCollection<string> GetHideoutTraders(string sessionId)
     {
         if (string.IsNullOrWhiteSpace(sessionId))
@@ -234,7 +238,6 @@ internal static class HideoutService
             return Array.Empty<string>();
         }
 
-        var state = StateService.GetState(sessionId);
-        return state.HideoutTraders.ToArray();
+        return StateService.WithState(sessionId, state => state.HideoutTraders.ToArray());
     }
 }

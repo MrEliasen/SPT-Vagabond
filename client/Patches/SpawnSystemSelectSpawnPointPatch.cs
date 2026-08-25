@@ -3,6 +3,7 @@ using System.Reflection;
 using EFT;
 using EFT.Game.Spawning;
 using HarmonyLib;
+using SPT.Common.Http;
 using SPT.Reflection.Patching;
 using Vagabond.Client.Services;
 using Vagabond.Common.Data;
@@ -27,10 +28,12 @@ internal class SpawnSystemSelectSpawnPointPatch : ModulePatch
 
         ForcedSpawnService.Clear();
 
+        var sessionId = RequestHandler.SessionId;
+
         var forcedSpawn = __instance._spawnPoints
             .FirstOrDefault(sp =>
                 sp != null &&
-                ForcedSpawnPointIds.IsForcedSpawnId(sp.Id) &&
+                ForcedSpawnPointIds.IsForcedSpawnIdForSession(sp.Id, sessionId) &&
                 sp.Categories.ContainPlayerCategory() &&
                 sp.IsValid(side));
 

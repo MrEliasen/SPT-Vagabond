@@ -22,20 +22,16 @@ internal static class VirtualStashService
     private const string ProfileDataKeyPrefix = VagabondModInfo.Guid + ".virtual_stash";
     private const string StashRootIdPlaceholder = "vgb_stash_root";
     private const string SortingTableRootIdPlaceholder = "vgb_sorting_root";
-
-    // Temp stash key for exits/transits that are not a hideout or a trader location.
     private const string TempStashKey = "VGB_TEMP_STASH";
-
     private const string BlockedActionMessage =
         "This action is not possible in this stash, as it is not your hideout stash.";
-
     private static readonly ConcurrentDictionary<MongoId, Lock> ActiveScopeLocks = new();
     private static readonly ConcurrentDictionary<MongoId, ActiveVirtualStashState> ActiveStashes = new();
-
-    // Per session gate so SPT never saves a profile while virtual items are swapped into its inventory.
     private static readonly ConcurrentDictionary<MongoId, SemaphoreSlim> SessionGates = new();
     private static readonly AsyncLocal<GateOwnership?> CurrentGateOwnership = new();
     private static readonly ConcurrentDictionary<string, string> PersistedStashSignatures = new();
+    private static readonly ConcurrentDictionary<MongoId, byte> ResetDeferralLogged = new();
+    private static readonly ConcurrentDictionary<MongoId, byte> SaveDeferralLogged = new();
 
     public static bool IsVirtualStashEnabled(MongoId sessionId)
     {
@@ -581,7 +577,7 @@ internal static class VirtualStashService
 
         return Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(json)));
     }
-    
+
     private static bool FlowOwnsGate(MongoId sessionId)
     {
         var ownership = CurrentGateOwnership.Value;
@@ -591,6 +587,36 @@ internal static class VirtualStashService
     internal static bool CurrentFlowOwnsGate(MongoId sessionId)
     {
         return FlowOwnsGate(sessionId);
+    }
+
+    internal static bool CurrentFlowOwnsForeignGate(MongoId sessionId)
+    {
+        var ownership = CurrentGateOwnership.Value;
+        return ownership is { Released: false } && ownership.SessionId != sessionId;
+    }
+
+    internal static IDisposable AcquireGateScope(MongoId sessionId)
+    {
+        return (IDisposable?)AcquireGate(sessionId) ?? Noop.Instance;
+    }
+
+    internal static IDisposable? TryAcquireGateScope(MongoId sessionId)
+    {
+        if (FlowOwnsGate(sessionId))
+        {
+            return Noop.Instance;
+        }
+
+        var gate = SessionGates.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
+        if (!gate.Wait(ExternalSaveGateTimeoutMs))
+        {
+            return null;
+        }
+
+        ClearGateTimeoutLatches(sessionId);
+        var ownership = new GateOwnership(sessionId);
+        CurrentGateOwnership.Value = ownership;
+        return new SessionGateHold(gate, ownership);
     }
 
     private static SessionGateHold? AcquireGate(MongoId sessionId)
@@ -603,9 +629,28 @@ internal static class VirtualStashService
         var gate = SessionGates.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
         gate.Wait();
 
+        ClearGateTimeoutLatches(sessionId);
         var ownership = new GateOwnership(sessionId);
         CurrentGateOwnership.Value = ownership;
         return new SessionGateHold(gate, ownership);
+    }
+
+    internal static bool ShouldLogResetDeferral(MongoId sessionId)
+    {
+        return ResetDeferralLogged.TryAdd(sessionId, 1);
+    }
+
+    private static void ClearGateTimeoutLatches(MongoId sessionId)
+    {
+        if (!ResetDeferralLogged.IsEmpty)
+        {
+            ResetDeferralLogged.TryRemove(sessionId, out _);
+        }
+
+        if (!SaveDeferralLogged.IsEmpty)
+        {
+            SaveDeferralLogged.TryRemove(sessionId, out _);
+        }
     }
 
     private const int ExternalSaveGateTimeoutMs = 5000;
@@ -621,11 +666,16 @@ internal static class VirtualStashService
         var gate = SessionGates.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
         if (!gate.Wait(ExternalSaveGateTimeoutMs))
         {
-            VagabondLogger.Warning(
-                $"Skipping profile save for {sessionId}: virtual stash window still open after {ExternalSaveGateTimeoutMs} ms; autosave will retry.");
+            if (SaveDeferralLogged.TryAdd(sessionId, 1))
+            {
+                VagabondLogger.Warning(
+                    $"Skipping profile save for {sessionId}: virtual stash window still open after {ExternalSaveGateTimeoutMs} ms; autosave will retry.");
+            }
+
             return ProfileSaveScope.Skipped;
         }
 
+        ClearGateTimeoutLatches(sessionId);
         var ownership = new GateOwnership(sessionId);
         CurrentGateOwnership.Value = ownership;
         return new ProfileSaveScope(new SessionGateHold(gate, ownership), null);
@@ -851,41 +901,43 @@ internal static class VirtualStashService
             return false;
         }
 
-        var state = StateService.GetState(sessionId);
-        if (!state.VagabondModeEnabled)
+        var (found, foundStashId) = StateService.WithState(sessionId, state =>
         {
-            return false;
-        }
-
-        if (HideoutService.GetTraderIds(state).Count > 0 && !string.IsNullOrWhiteSpace(state.LastExit))
-        {
-            stashId = state.LastExit;
-            return true;
-        }
-
-        if (!string.IsNullOrEmpty(state.HideoutState?.Id) &&
-            state.LastExit != $"{HideoutService.HideoutIdPrefix}{state.HideoutState?.Id}")
-        {
-            if (state.LastExit.IndexOf(HideoutService.HideoutIdPrefix, StringComparison.OrdinalIgnoreCase) == 0)
+            if (!state.VagabondModeEnabled)
             {
-                if (VagabondConfig.Config.ShareHideoutExits)
-                {
-                    return false;
-                }
-
-                stashId = state.LastExit;
-                return true;
+                return (false, string.Empty);
             }
-        }
 
-        if (!string.IsNullOrWhiteSpace(state.LastExit) &&
-            state.LastExit.IndexOf(HideoutService.HideoutIdPrefix, StringComparison.OrdinalIgnoreCase) != 0)
-        {
-            stashId = TempStashKey;
-            return true;
-        }
+            if (HideoutService.GetTraderIds(state).Count > 0 && !string.IsNullOrWhiteSpace(state.LastExit))
+            {
+                return (true, state.LastExit);
+            }
 
-        return false;
+            if (!string.IsNullOrEmpty(state.HideoutState?.Id) &&
+                state.LastExit != $"{HideoutService.HideoutIdPrefix}{state.HideoutState?.Id}")
+            {
+                if (state.LastExit.IndexOf(HideoutService.HideoutIdPrefix, StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    if (VagabondConfig.Config.ShareHideoutExits)
+                    {
+                        return (false, string.Empty);
+                    }
+
+                    return (true, state.LastExit);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(state.LastExit) &&
+                state.LastExit.IndexOf(HideoutService.HideoutIdPrefix, StringComparison.OrdinalIgnoreCase) != 0)
+            {
+                return (true, TempStashKey);
+            }
+
+            return (false, string.Empty);
+        });
+
+        stashId = foundStashId;
+        return found;
     }
 
     private sealed class ActiveStashSession : IDisposable

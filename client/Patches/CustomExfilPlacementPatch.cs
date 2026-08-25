@@ -25,8 +25,37 @@ internal class CustomExfilPlacementPatch : ModulePatch
     public static bool ExtractsAppliedThisRaid;
     public static bool TransitsAppliedThisRaid;
     public static bool LootToastShownThisRaid;
+    public static bool LocationDesyncedThisRaid;
     public static readonly Dictionary<int, CustomExfil> CustomTransitDefinitions = new();
     public static Dictionary<string, ExfiltrationPoint> ExfilPointTemplateCache = new();
+    private const int PlacementRetryFrameBudget = 60;
+    private static int _placementRetryFrames;
+    internal static bool RaidInitCompletedThisRaid;
+    private static bool _transitControllerMissingLogged;
+    private static bool _transitTemplateMissingLogged;
+    private static bool _exfilPointsMissingLogged;
+
+    internal static void CountPlacementRetryFrame()
+    {
+        if (_placementRetryFrames < PlacementRetryFrameBudget)
+        {
+            _placementRetryFrames++;
+        }
+    }
+
+    private static bool RetryBudgetExhausted()
+    {
+        return _placementRetryFrames >= PlacementRetryFrameBudget;
+    }
+
+    internal static void ResetPlacementRetryBudget()
+    {
+        _placementRetryFrames = 0;
+        RaidInitCompletedThisRaid = false;
+        _transitControllerMissingLogged = false;
+        _transitTemplateMissingLogged = false;
+        _exfilPointsMissingLogged = false;
+    }
 
     protected override MethodBase GetTargetMethod()
     {
@@ -35,8 +64,10 @@ internal class CustomExfilPlacementPatch : ModulePatch
     }
 
     [PatchPostfix]
-    public static void Postfix(ExfiltrationController __instance)
+    public static void Postfix(ExfiltrationController __instance, BackendExitTriggerSettings[] settings)
     {
+        RaidInitCompletedThisRaid = true;
+
         if (ExtractsAppliedThisRaid && TransitsAppliedThisRaid)
         {
             return;
@@ -63,10 +94,22 @@ internal class CustomExfilPlacementPatch : ModulePatch
             return;
         }
 
+        if (!LocationDesyncedThisRaid && DetectLocationDesync(__instance, settings, locationId))
+        {
+            LocationDesyncedThisRaid = true;
+            ExtractsAppliedThisRaid = true;
+            TransitsAppliedThisRaid = true;
+        }
+
         Vagabond.Log($"RefreshVagabondStateBlocking");
         CommunicationService.RefreshVagabondStateBlocking();
         Vagabond.Log($"RefreshExfilStateBlocking");
         CommunicationService.RefreshExfilStateBlocking();
+
+        if (LocationDesyncedThisRaid)
+        {
+            return;
+        }
 
         ShowLootStreakToast(locationId);
 
@@ -126,12 +169,27 @@ internal class CustomExfilPlacementPatch : ModulePatch
 
         if (definitions == null || definitions.Count == 0)
         {
+            ExtractsAppliedThisRaid = true;
             return addedPoints;
         }
 
         var pmcExfils = controller?.ExfiltrationPoints?.Where(x => x != null).ToList();
         if (pmcExfils == null || pmcExfils.Count == 0)
         {
+            if (!RetryBudgetExhausted())
+            {
+                return addedPoints;
+            }
+
+            if (!_exfilPointsMissingLogged)
+            {
+                _exfilPointsMissingLogged = true;
+                Vagabond.LogError(
+                    $"No exfiltration points exist on {raid} after {PlacementRetryFrameBudget} frames; " +
+                    "custom extracts cannot be placed this raid.");
+            }
+
+            ExtractsAppliedThisRaid = true;
             return addedPoints;
         }
 
@@ -175,9 +233,6 @@ internal class CustomExfilPlacementPatch : ModulePatch
                 cloneObject.SetActive(true);
                 ConfigureExtractClone(clone, template, definition, pmcExfils.Count + 1);
 
-                // other mods's patches which hits the ExfiltrationPoint.Awake (found with AmandsSense
-                // throwing on missing Exfil.png for example) seems to leave it enabled=false.
-                // This should force set the state as a backup, and warn if it happens.
                 if (!clone.enabled || !cloneObject.activeInHierarchy)
                 {
                     Vagabond.LogError(
@@ -190,7 +245,11 @@ internal class CustomExfilPlacementPatch : ModulePatch
                 if (!force)
                 {
                     var mainPlayer = Singleton<GameWorld>.Instance?.MainPlayer;
-                    if (mainPlayer != null && ExfilService.IsPlayerInsidePointTrigger(mainPlayer, clone))
+                    if (mainPlayer == null)
+                    {
+                        ExfilService.PendingSpawnOverlapPoints.Add(clone);
+                    }
+                    else if (ExfilService.IsPlayerInsidePointTrigger(mainPlayer, clone))
                     {
                         ExfilService.SuppressedCustomExtractPointIds.Add(clone.GetInstanceID());
                     }
@@ -355,12 +414,27 @@ internal class CustomExfilPlacementPatch : ModulePatch
 
         if (definitions == null || definitions.Count == 0)
         {
+            // Empty means its applied, stops the per frame retry
+            TransitsAppliedThisRaid = true;
             return;
         }
 
         if (transitController == null)
         {
-            Vagabond.Log($"Transit controller is null on {raid}; cannot place custom transit points, retrying...");
+            if (!RetryBudgetExhausted())
+            {
+                return;
+            }
+
+            if (!_transitControllerMissingLogged)
+            {
+                _transitControllerMissingLogged = true;
+                Vagabond.Log(
+                    $"Transit controller is null on {raid} after {PlacementRetryFrameBudget} frames " +
+                    "(transits are disabled for this raid); custom transit points will not be placed.");
+            }
+
+            TransitsAppliedThisRaid = true;
             return;
         }
 
@@ -368,7 +442,20 @@ internal class CustomExfilPlacementPatch : ModulePatch
         var existingTransitPoints = LocationScene.GetAllObjects<TransitPoint>().Where(x => x != null).ToList();
         if (existingTransitPoints.Count == 0)
         {
-            Vagabond.LogError($"No TransitPoint template exists in the {raid} scene.");
+            if (!RetryBudgetExhausted())
+            {
+                return;
+            }
+
+            if (!_transitTemplateMissingLogged)
+            {
+                _transitTemplateMissingLogged = true;
+                Vagabond.LogError(
+                    $"No TransitPoint template exists in the {raid} scene after {PlacementRetryFrameBudget} " +
+                    "frames; custom transit points will not be placed this raid.");
+            }
+
+            TransitsAppliedThisRaid = true;
             return;
         }
 
@@ -424,6 +511,26 @@ internal class CustomExfilPlacementPatch : ModulePatch
         TransitsAppliedThisRaid = true;
     }
 
+    private static string ResolveTransitTargetId(CustomExfil definition)
+    {
+        var source = string.IsNullOrWhiteSpace(definition.AccessKeysSourceLocation)
+            ? definition.DestinationLocation
+            : definition.AccessKeysSourceLocation;
+
+        var raid = VagabondLocations.NormaliseMapName(source);
+        if (raid == RaidLocation.Nil
+            || !VagabondLocations.Locations.TryGetValue(raid, out var ids)
+            || ids.Count == 0)
+        {
+            Vagabond.LogError(
+                $"Custom transit '{definition.Identifier}' points at unknown location '{source}'; " +
+                "its access keys cannot gate it.");
+            return source;
+        }
+
+        return ids.First();
+    }
+
     private static void ConfigureTransitClone(TransitPoint clone, TransitController controller,
         TransitPoint template, CustomExfil definition)
     {
@@ -441,9 +548,7 @@ internal class CustomExfilPlacementPatch : ModulePatch
             conditions = BuildTransitConditionsString(definition),
             activateAfterSec = definition.ActivateAfterSeconds,
             time = (ushort)Mathf.Clamp(Mathf.RoundToInt(definition.ExfiltrationTime), 1, ushort.MaxValue),
-            target = string.IsNullOrWhiteSpace(definition.AccessKeysSourceLocation)
-                ? definition.DestinationLocation
-                : definition.AccessKeysSourceLocation,
+            target = ResolveTransitTargetId(definition),
             location = definition.DestinationLocation,
             events = definition.Events,
             hideIfNoKey = definition.HideIfNoKey,
@@ -793,6 +898,65 @@ internal class CustomExfilPlacementPatch : ModulePatch
         };
     }
 
+    private static bool DetectLocationDesync(ExfiltrationController controller,
+        BackendExitTriggerSettings[] settings, string locationId)
+    {
+        var scenePoints = controller?.ExfiltrationPoints;
+        if (scenePoints == null || scenePoints.Length == 0 || settings == null || settings.Length == 0)
+        {
+            return false;
+        }
+
+        var expectedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var setting in settings)
+        {
+            if (!string.IsNullOrWhiteSpace(setting?.Name))
+            {
+                expectedNames.Add(setting.Name);
+            }
+        }
+
+        if (expectedNames.Count == 0)
+        {
+            return false;
+        }
+
+        var total = 0;
+        var matched = 0;
+        var unmatched = new List<string>();
+        foreach (var point in scenePoints)
+        {
+            var name = point?.Settings?.Name;
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            total++;
+            if (expectedNames.Contains(name))
+            {
+                matched++;
+            }
+            else
+            {
+                unmatched.Add(name);
+            }
+        }
+
+        if (total == 0 || matched * 2 >= total)
+        {
+            return false;
+        }
+
+        Vagabond.LogError(
+            $"LOCATION DESYNC DETECTED (issue 136): gameWorld.LocationId claims '{locationId}' but only " +
+            $"{matched}/{total} scene exfil points match that map's exit list " +
+            $"(scene-only exits: {string.Join(", ", unmatched)}). Vagabond will NOT place custom " +
+            "extracts/transits and will NOT hide native exits for this raid — all of the real map's " +
+            "extracts stay available. Extract normally and report this raid (map shown may be wrong).");
+        return true;
+    }
+
     public static void FilterExtractions(ExfiltrationController __instance)
     {
         if (__instance == null)
@@ -898,12 +1062,16 @@ internal class CustomExfilCleanupPatch : ModulePatch
         CustomExfilPlacementPatch.TransitsAppliedThisRaid = false;
         CustomExfilPlacementPatch.ExtractsAppliedThisRaid = false;
         CustomExfilPlacementPatch.LootToastShownThisRaid = false;
+        CustomExfilPlacementPatch.LocationDesyncedThisRaid = false;
+        CustomExfilPlacementPatch.ResetPlacementRetryBudget();
         CustomExfilPlacementPatch.CustomTransitDefinitions.Clear();
         CustomExfilPlacementPatch.ExfilPointTemplateCache.Clear();
         ExfilService.SuppressedCustomExtractPointIds.Clear();
+        ExfilService.PendingSpawnOverlapPoints.Clear();
         TransitCostService.Cleanup();
         TransitInteractionLabelPatch.ClearCache();
-        Vagabond.State.LastRaidStateSyncLocationId = string.Empty;
+        ActiveHealthControllerPatch.ResetFallDamageArming();
+        ForcedSpawnService.Clear();
     }
 }
 
@@ -917,6 +1085,16 @@ internal class CustomTransitRetryPatch : ModulePatch
     [PatchPostfix]
     private static void Postfix(GameWorld __instance)
     {
+        if (CustomExfilPlacementPatch.LocationDesyncedThisRaid)
+        {
+            return;
+        }
+
+        if (!CustomExfilPlacementPatch.RaidInitCompletedThisRaid)
+        {
+            return;
+        }
+
         if (CustomExfilPlacementPatch.ExtractsAppliedThisRaid && CustomExfilPlacementPatch.TransitsAppliedThisRaid)
         {
             return;
@@ -943,15 +1121,33 @@ internal class CustomTransitRetryPatch : ModulePatch
 
         if (exfils == null)
         {
+            CustomExfilPlacementPatch.ExtractsAppliedThisRaid = true;
+            CustomExfilPlacementPatch.TransitsAppliedThisRaid = true;
             return;
         }
 
         exfils.TryGetValue(locationId, out var definitions);
 
-        CustomExfilPlacementPatch.ApplyCustomExtracts(__instance.ExfiltrationController, raid,
-            definitions?.Where(x => !x.IsTransit).ToList());
-        CustomExfilPlacementPatch.ApplyCustomTransits(__instance.TransitController, raid,
-            definitions?.Where(x => x.IsTransit).ToList());
-        CustomExfilPlacementPatch.FilterExtractions(__instance.ExfiltrationController);
+        CustomExfilPlacementPatch.CountPlacementRetryFrame();
+
+        var extractsWereApplied = CustomExfilPlacementPatch.ExtractsAppliedThisRaid;
+        var transitsWereApplied = CustomExfilPlacementPatch.TransitsAppliedThisRaid;
+        if (!extractsWereApplied)
+        {
+            CustomExfilPlacementPatch.ApplyCustomExtracts(__instance.ExfiltrationController, raid,
+                definitions?.Where(x => !x.IsTransit).ToList());
+        }
+
+        if (!transitsWereApplied)
+        {
+            CustomExfilPlacementPatch.ApplyCustomTransits(__instance.TransitController, raid,
+                definitions?.Where(x => x.IsTransit).ToList());
+        }
+
+        if (CustomExfilPlacementPatch.ExtractsAppliedThisRaid != extractsWereApplied ||
+            CustomExfilPlacementPatch.TransitsAppliedThisRaid != transitsWereApplied)
+        {
+            CustomExfilPlacementPatch.FilterExtractions(__instance.ExfiltrationController);
+        }
     }
 }

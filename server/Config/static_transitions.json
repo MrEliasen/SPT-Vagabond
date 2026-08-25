@@ -13,8 +13,7 @@
   //  Lighthouse,
   //  Reserve,
   //  Shoreline,
-  //  Labs,
-  //  Labyrinth
+  //  Labs
 
   // Ground Zero
   {
@@ -74,6 +73,15 @@
     "z": -24.815,
     "rotation": 258.376
   },
+  // Labyrinth's DB transit to Customs (WOO_TRANSIT_41) is identical to the Woods one, so it uses the same arrival point.
+  {
+    "from": "Labyrinth",
+    "to": "Customs",
+    "x": 653.017,
+    "y": -0.292,
+    "z": -24.815,
+    "rotation": 258.376
+  },
   // Streets
   {
     "from": "Labs",
@@ -93,14 +101,6 @@
   },
   {
     "from": "Interchange",
-    "to": "Streets",
-    "x": 288.596,
-    "y": 3.469,
-    "z": 489.124,
-    "rotation": 227.398
-  },
-  {
-    "from": "Woods",
     "to": "Streets",
     "x": 288.596,
     "y": 3.469,
@@ -148,6 +148,15 @@
     "y": -7.007,
     "z": -176.805,
     "rotation": 211.995
+  },
+  // Labyrinth's DB transit to Reserve (WOO_TRANSIT_16) is identical to the Woods one, so it uses the same arrival point.
+  {
+    "from": "Labyrinth",
+    "to": "Reserve",
+    "x": 35.423,
+    "y": -7.003,
+    "z": -221.638,
+    "rotation": 349.134
   },
   // Woods
   {
@@ -215,6 +224,14 @@
     "z": -959.373,
     "rotation": 5.686
   },
+  {
+    "from": "Labyrinth",
+    "to": "Lighthouse",
+    "x": 104.531,
+    "y": 4.642,
+    "z": -959.373,
+    "rotation": 5.686
+  },
   // Shoreline
   {
     "from": "Customs",
@@ -250,36 +267,20 @@
     "rotation": 174.311
   },
   {
-    "from": "Labs",
+    "from": "Labyrinth",
     "to": "FactoryDay",
-    "x": -24.79,
-    "y": -3.562,
-    "z": -25.751,
-    "rotation": 55.127
-  },
-  // Factory Night
-  {
-    "from": "Customs",
-    "to": "FactoryNight",
-    "x": 19.901,
-    "y": -0.335,
-    "z": -49.05,
-    "rotation": 357.57
-  },
-  {
-    "from": "Woods",
-    "to": "FactoryNight",
     "x": 22.337,
     "y": 1.169,
     "z": 63.884,
     "rotation": 174.311
   },
+  // Labs
   {
-    "from": "Labs",
-    "to": "FactoryNight",
-    "x": -24.79,
-    "y": -3.562,
-    "z": -25.751,
-    "rotation": 55.127
+    "from": "Streets",
+    "to": "Labs",
+    "x": -170.49,
+    "y": 0.06,
+    "z": -419.39,
+    "rotation": 349.64
   }
 ]

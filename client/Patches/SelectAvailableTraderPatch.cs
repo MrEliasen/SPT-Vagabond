@@ -45,6 +45,16 @@ public class SelectAvailableTraderPatch : ModulePatch
     private static IEnumerator CloseNextFrame()
     {
         yield return null;
-        _ = EftScreenManager.Instance.TryReturnToRootScreen();
+
+        var returnTask = EftScreenManager.Instance.TryReturnToRootScreen();
+        while (!returnTask.IsCompleted)
+        {
+            yield return null;
+        }
+
+        if (returnTask.IsFaulted)
+        {
+            Vagabond.LogError($"Failed to return to the root screen: {returnTask.Exception}");
+        }
     }
 }

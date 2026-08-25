@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using EFT.UI;
 using EFT.UI.Matchmaker;
 using SPT.Reflection.Patching;
@@ -10,6 +11,8 @@ namespace Vagabond.Client.Patches;
 // Nicked from https://github.com/dwesterwick/SPTHardcoreRules <3
 internal class MatchMakerSideSelectionScreenPatch : ModulePatch
 {
+    private const string BlockMessage = "Disabled (Vagabond Mod)";
+
     protected override MethodBase GetTargetMethod()
     {
         return typeof(MatchMakerSideSelectionScreen).GetMethod(nameof(MatchMakerSideSelectionScreen.Update),
@@ -24,7 +27,11 @@ internal class MatchMakerSideSelectionScreenPatch : ModulePatch
         ____savageModelView.GameObject?.SetActive(false);
         ____savageBlockMessage.gameObject.SetActive(true);
 
-        ____savageBlockMessage.SetText("Disabled (Vagabond Mod)");
+        if (!string.Equals(____savageBlockMessage.text, BlockMessage, StringComparison.Ordinal))
+        {
+            ____savageBlockMessage.SetText(BlockMessage);
+        }
+
         ____savageBlocker.alpha = 0.3f;
     }
 }
