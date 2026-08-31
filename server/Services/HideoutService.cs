@@ -14,15 +14,6 @@ internal static class HideoutService
 
     public const string HideoutNamePrefix = "Hideout Entrance";
 
-    // access is not changed by extraction.
-    private static readonly List<string> IgnoredTraders =
-    [
-        "656f0f98d80a697f855d34b1", // BTR Driver
-        "638f541a29ffd1183d187f57", // Lightkeeper
-        "6617beeaa9cfa777ca915b7c", // Ref
-        "6864e812f9fe664cb8b8e152", // Storyteller
-    ];
-
     private static readonly Lock TraderLocationsLock = new();
     private static volatile List<TraderLocation> _traderLocations = new();
 
@@ -96,7 +87,7 @@ internal static class HideoutService
 
         foreach (KeyValuePair<MongoId, TraderInfo> entry in tradersInfo)
         {
-            if (IgnoredTraders.Contains(entry.Key))
+            if (VagabondConfig.Config.IgnoredTraders.Contains(entry.Key))
             {
                 continue;
             }

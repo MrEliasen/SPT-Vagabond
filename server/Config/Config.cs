@@ -38,6 +38,17 @@ public sealed class VagabondConfig
     public double ConsecutiveMapLootRetentionMin { get; set; } = 0.05;
     public double HealthOnDeath { get; set; }
     public bool ForceGroundZeroHigh { get; set; }
+    public List<string> IgnoredTraders { get; set; } = [
+        "656f0f98d80a697f855d34b1", // BTR Driver
+        "638f541a29ffd1183d187f57", // Lightkeeper
+        "6864e812f9fe664cb8b8e152", // Storyteller
+        "69e0d6cc77b63940375b9173", // Survivor
+        "68fe15910f29ba3fdbba9d54", // Taran
+        "688246958448b05efd61d462", // Voevoda
+        "688246518448b05efd61d461", // Mr. Kerman
+        "68fe15990f29ba3fdbba9d55", // Radio station
+        "6617beeaa9cfa777ca915b7c" // Ref
+    ];
 
     public static VagabondConfig Config = new();
     
