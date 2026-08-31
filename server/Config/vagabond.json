@@ -77,9 +77,10 @@
   // factory day and night count as the same map.
   "EnableConsecutiveMapLootReduction": true,
   // Exponential multiplier applied to total loot spawns per consecutive raid on the same map.
-  //  0.9 = keep 90% loot per raid. After 2 raids, the loot spanws are reduced to: 81% (0.9 ^ 2 = 0.81)
-  //  0.5 = keep 50% loot per raid. After 2 raids, the loot spanws are reduced to: 25% (0.5 ^ 2 = 0.25)
-  //  0.1 = keep 10% loot per raid. After 2 raids, the loot spanws are reduced to: 1% (0.1 ^ 2 = 0.01)
+  //  1.0 = Loot amount stays at 100% each raid.
+  //  0.9 = Maps spawn 90% of its default loot per raid. After 2 raids, the loot spanws are reduced to: 81% (0.9 ^ 2 = 0.81)
+  //  0.5 = Maps spawn  50% of its default loot per raid. After 2 raids, the loot spanws are reduced to: 25% (0.5 ^ 2 = 0.25)
+  //  0.1 = Maps spawn  10% of its default loot per raid. After 2 raids, the loot spanws are reduced to: 1% (0.1 ^ 2 = 0.01)
   "ConsecutiveMapLootRetentionRate": 0.5,
   // the minimum amount of loot spawn regardless of streak. 0.05 = 5% of the default/normal amount of loot.
   "ConsecutiveMapLootRetentionMin": 0.05,
