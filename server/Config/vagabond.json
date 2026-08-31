@@ -70,6 +70,8 @@
   "AddFenceToHideout": false,
   // if enabled, you can use another player's hideout exit to access your own hideout
   "ShareHideoutExits": false,
+  // if enabled, the hideout can only be accessed after extracting at your hideout.
+  "LimitHideoutAccessToHideoutExfil": true,
   // limit mail from traders so you can only access mail attachments if the trader is available where you are.
   "LimitTraderMailAccess": true,
   // if enabled, each consecutive successful extract from the same map reduces the loot the next raid into that map.

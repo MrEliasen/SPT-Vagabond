@@ -22,6 +22,7 @@ public sealed class VagabondConfig
     public bool EnablePickRaidLocation { get; set; }
     public bool AddFenceToHideout { get; set; }
     public bool ShareHideoutExits { get; set; }
+    public bool LimitHideoutAccessToHideoutExfil { get; set; }
     public bool EnableVirtualStashes { get; set; } = true;
     public bool WipeVirtualStashesOnRaidEntry { get; set; }
     public bool AllowPostRaidHealing { get; set; } = true;

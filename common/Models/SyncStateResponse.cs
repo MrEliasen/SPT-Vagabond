@@ -15,6 +15,8 @@ public class SyncStateResponse
     public Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>? CustomExfils { get; set; }
     public HashSet<string> RaidFirItems { get; set; } = new();
     public bool LimitTraderMailAccess { get; set; }
+    public bool HideoutAccessible { get; set; }
+    public bool LimitHideoutAccess { get; set; }
     public bool LootStreakEnabled { get; set; }
     public double LootStreakMultiplier { get; set; } = 1.0;
     public int LootStreakCount { get; set; }

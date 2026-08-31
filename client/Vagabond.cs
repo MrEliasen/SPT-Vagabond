@@ -85,6 +85,7 @@ public class Vagabond : BaseUnityPlugin
         new TransitInteractionLabelPatch().Enable();
         new TransitCommitPatch().Enable();
         new SkipInsuranceFlowPatch().Enable();
+        new BlockHideoutAccessPatch().Enable();
         UIMessageService.Create(transform);
 
         _hideoutHotkey = Config.Bind(

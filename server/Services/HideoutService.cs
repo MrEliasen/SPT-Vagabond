@@ -73,6 +73,18 @@ internal static class HideoutService
             .ToArray();
     }
 
+    public static bool IsAtHideout(VagabondSessionState state)
+    {
+        var isOwnHideout = !string.IsNullOrEmpty(state.HideoutState?.Id) &&
+                           state.LastExit == $"{HideoutIdPrefix}{state.HideoutState?.Id}";
+
+        var isSharedHideout = VagabondConfig.Config.ShareHideoutExits &&
+                              !string.IsNullOrEmpty(state.LastExit) &&
+                              state.LastExit.IndexOf(HideoutIdPrefix, StringComparison.OrdinalIgnoreCase) == 0;
+
+        return isOwnHideout || isSharedHideout;
+    }
+
     public static void UpdateTraderAccess(PmcData pmc, VagabondSessionState state)
     {
         var currentTraderIds = new HashSet<string>(GetTraderIds(state), StringComparer.Ordinal);

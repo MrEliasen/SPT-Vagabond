@@ -95,6 +95,8 @@ public class VagabondRouter(
             response.CurrentMap = VagabondService.GetCurrentRaidId(sessionId, state);
             response.NewCharacter = string.IsNullOrEmpty(state.CurrentMap);
             response.LimitTraderMailAccess = VagabondConfig.Config.LimitTraderMailAccess;
+            response.HideoutAccessible = HideoutService.IsAtHideout(state);
+            response.LimitHideoutAccess = VagabondConfig.Config.LimitHideoutAccessToHideoutExfil;
             response.RaidFirItems = state.RaidFirItems != null
                 ? new HashSet<string>(state.RaidFirItems)
                 : new HashSet<string>();
