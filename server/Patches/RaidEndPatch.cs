@@ -106,14 +106,9 @@ public sealed class RaidEndPatch : AbstractPatch
                         continue;
                     }
 
-                    if (part.Health?.Minimum == null)
-                    {
-                        continue;
-                    }
-
                     part.Health!.Current =
                         Math.Clamp(part.Health.Maximum.Value * VagabondConfig.Config.HealthOnDeath,
-                            part.Health.Minimum.Value, part.Health.Maximum.Value);
+                            1, part.Health.Maximum.Value);
                 }
             }
         }
