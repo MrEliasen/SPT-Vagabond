@@ -45,13 +45,13 @@
       "requirements": [
         {
           "type": "HasItem",
-          "id": "5c012ffc0db834001d23f03f",
+          "id": "5c0126f40db834002a125382",
           "count": 1,
           "requirementTip": "Requires Red Rebel"
         },
         {
           "type": "HasItem",
-          "id": "5d80c60f86f77440373c4ece",
+          "id": "5c12688486f77426843c7d32",
           "count": 1,
           "requirementTip": "Requires Paracord"
         }
