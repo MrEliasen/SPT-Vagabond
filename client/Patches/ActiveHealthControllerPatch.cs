@@ -40,7 +40,7 @@ public class ActiveHealthControllerPatch : ModulePatch
             _spawnAnchor = position;
             return;
         }
-        
+
         var anchor = _spawnAnchor.Value;
         var dx = position.x - anchor.x;
         var dz = position.z - anchor.z;

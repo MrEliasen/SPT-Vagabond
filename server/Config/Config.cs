@@ -40,7 +40,9 @@ public sealed class VagabondConfig
     public double EnergyOnDeath { get; set; }
     public double WaterOnDeath { get; set; }
     public bool ForceGroundZeroHigh { get; set; }
-    public List<string> IgnoredTraders { get; set; } = [
+
+    public List<string> IgnoredTraders { get; set; } =
+    [
         "656f0f98d80a697f855d34b1", // BTR Driver
         "638f541a29ffd1183d187f57", // Lightkeeper
         "6864e812f9fe664cb8b8e152", // Storyteller
@@ -53,7 +55,7 @@ public sealed class VagabondConfig
     ];
 
     public static VagabondConfig Config = new();
-    
+
     public static (string Raid, string ExfilIdentifier) GetStartLocation()
     {
         var raid = VagabondLocations.NormaliseMapName(Config.StartRaid);

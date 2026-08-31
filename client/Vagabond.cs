@@ -64,7 +64,7 @@ public class Vagabond : BaseUnityPlugin
         new KeepFirStatusPatch().Enable();
 
         TryEnableAbpsCompatibilityPatches();
-        
+
         new MenuShowPatch().Enable();
         new TryGetLocationByIdPatch().Enable();
 

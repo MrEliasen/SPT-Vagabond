@@ -23,8 +23,10 @@ internal static class VirtualStashService
     private const string StashRootIdPlaceholder = "vgb_stash_root";
     private const string SortingTableRootIdPlaceholder = "vgb_sorting_root";
     private const string TempStashKey = "VGB_TEMP_STASH";
+
     private const string BlockedActionMessage =
         "This action is not possible in this stash, as it is not your hideout stash.";
+
     private static readonly ConcurrentDictionary<MongoId, Lock> ActiveScopeLocks = new();
     private static readonly ConcurrentDictionary<MongoId, ActiveVirtualStashState> ActiveStashes = new();
     private static readonly ConcurrentDictionary<MongoId, SemaphoreSlim> SessionGates = new();

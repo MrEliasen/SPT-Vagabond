@@ -16,7 +16,6 @@ namespace Vagabond.Server.Routes;
 [Injectable]
 public class VagabondRouter(
     JsonUtil jsonUtil) : StaticRouter(jsonUtil, [
-
     new RouteAction(
         "/vagabond/sync/state",
         (_, info, sessionID, _, _) =>
