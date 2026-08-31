@@ -37,6 +37,8 @@ public sealed class VagabondConfig
     public double ConsecutiveMapLootRetentionRate { get; set; } = 0.5;
     public double ConsecutiveMapLootRetentionMin { get; set; } = 0.05;
     public double HealthOnDeath { get; set; }
+    public double EnergyOnDeath { get; set; }
+    public double WaterOnDeath { get; set; }
     public bool ForceGroundZeroHigh { get; set; }
     public List<string> IgnoredTraders { get; set; } = [
         "656f0f98d80a697f855d34b1", // BTR Driver

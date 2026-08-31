@@ -113,6 +113,26 @@ public sealed class RaidEndPatch : AbstractPatch
             }
         }
 
+        if (isDead && VagabondConfig.Config.EnergyOnDeath > 0)
+        {
+            var energy = fullServerProfile.CharacterData?.PmcData?.Health?.Energy;
+
+            if (energy?.Maximum != null)
+            {
+                energy.Current = Math.Clamp(VagabondConfig.Config.EnergyOnDeath, 1, energy.Maximum.Value);
+            }
+        }
+
+        if (isDead && VagabondConfig.Config.WaterOnDeath > 0)
+        {
+            var water = fullServerProfile.CharacterData?.PmcData?.Health?.Hydration;
+
+            if (water?.Maximum != null)
+            {
+                water.Current = Math.Clamp(VagabondConfig.Config.WaterOnDeath, 1, water.Maximum.Value);
+            }
+        }
+
         var items = fullServerProfile.CharacterData?.PmcData?.Inventory?.Items;
         if (items == null)
         {

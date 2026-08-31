@@ -90,6 +90,10 @@
   // 0.25 = 25%
   // 0.0 = game default.
   "HealthOnDeath": 0.0,
+  // if enabled, will set your energy and water to this amount when you die.
+  // 0 = game default.
+  "WaterOnDeath": 0,
+  "EnergyOnDeath": 0,
   // if enabled, all players (regardless of level) are routed to sandbox_high (the harder Ground Zero variant).
   // Otherwise, it will use the vanilla level gate to determine which GZ variant you will be routes to.
   "ForceGroundZeroHigh": false,
