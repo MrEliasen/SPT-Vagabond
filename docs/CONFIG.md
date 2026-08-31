@@ -77,8 +77,9 @@ Custom respawn example:
 | Field | Default | Notes |
 | --- | --- | --- |
 | `AllowHideoutRelocation` | `false` | `true` → place freely (CTRL+P). `false` → relocation requires `Fresh Foundations` quest from Skier. |
-| `HideoutRelocationFee` | `350000` | Roubles per relocation. |
-| `ShareHideoutExits` | `false` | Other players' hideout exits also reach yours. |
+| `HideoutRelocationFee` | `350000` | Roubles per relocation.                                                                           |
+| `ShareHideoutExits` | `false` | Other players' hideout exits also reach yours.                                                    |
+| `LimitHideoutAccessToHideoutExfil` | `false` | Hideout is only accessible when extracting at your hideout.                                       |
 
 ### Stash
 
