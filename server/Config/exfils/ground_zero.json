@@ -11,8 +11,6 @@
       "y": 29.715,
       "z": 91.594,
       "rotationY": 178.348,
-      
-      //QUICK FIX: Before the mod was automatically picking an extract called "Unity_free_exit" which was not working correctly. Below we specify a working extract (nakatani stairs) so the extract works.
       "templateExitName": "Nakatani_stairs_free_exit"
     }
   ],
