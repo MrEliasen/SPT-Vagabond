@@ -1,7 +1,7 @@
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Models.Spt.Mod;
-using SPTarkov.Server.Core.Models.Utils;
 using Vagabond.Common.Api;
 using Vagabond.Common.Data;
 using Vagabond.Common.Definitions;
@@ -9,24 +9,24 @@ using Vagabond.Common.Enums;
 
 namespace Vagabond.ApiExample;
 
-public record ModMetadata : AbstractModMetadata
+public class ModMetadata : IModMetadata
 {
-    public override string ModGuid { get; init; } = "dev.oogabooga.vagabond-api-example";
-    public override string Name { get; init; } = "Vagabond API Example";
-    public override string Author { get; init; } = "Oogabooga.dev";
-    public override SemanticVersioning.Version Version { get; init; } = new("1.0.0");
-    public override SemanticVersioning.Range SptVersion { get; init; } = new("~4.0.13");
-    public override string? Url { get; init; } = "https://github.com/MrEliasen/spt-vagabond";
-    public override string License { get; init; } = "MIT";
-    public override List<string>? Contributors { get; init; } = new() { "Oogabooga.dev" };
-    public override List<string>? Incompatibilities { get; init; }
-    public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
-    public override bool? IsBundleMod { get; init; }
+    public string ModGuid { get; init; } = "dev.oogabooga.vagabond-api-example";
+    public string Name { get; init; } = "Vagabond API Example";
+    public string Author { get; init; } = "Oogabooga.dev";
+    public SemanticVersioning.Version Version { get; init; } = new("1.0.0");
+    public SemanticVersioning.Range SptVersion { get; init; } = new("~4.1.0");
+    public bool HasPrepatcher { get; init; }
+    public string? Url { get; init; } = "https://github.com/MrEliasen/spt-vagabond";
+    public string License { get; init; } = "MIT";
+    public List<string>? Contributors { get; init; } = new() { "Oogabooga.dev" };
+    public List<string>? Incompatibilities { get; init; }
+    public Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
 }
 
-// The "+2" makes sure your mod initialises after Vagabond (which is set to +1).
+// The "+2" makes sure your mod initialises after Vagabond's database loader (which is set to PostLoad + 1).
 // This is needed for the API to be available for you to use.
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 2)]
+[Injectable(TypePriority = OnLoadOrder.PostLoad + 2)]
 public sealed class VagabondApiExampleLoader : IOnLoad
 {
     private readonly ISptLogger<VagabondApiExampleLoader> _logger;
@@ -36,7 +36,7 @@ public sealed class VagabondApiExampleLoader : IOnLoad
         _logger = logger;
     }
 
-    public Task OnLoad()
+    public Task OnLoadAsync(CancellationToken cancellationToken)
     {
         if (IsVagabondEnabled())
         {
@@ -146,7 +146,7 @@ public sealed class VagabondApiExampleLoader : IOnLoad
             },
         ];
 
-        // here we add the transits and exfils we made, to "Customs"
+        // here we add the transits and exfils we made, to "Woods"
         Api.AddExfils(RaidLocation.Woods, myCustomTransits, myCustomExfils);
         _logger.Success("Added additional exfils via Vagabond API");
 
