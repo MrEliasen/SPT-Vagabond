@@ -4,6 +4,7 @@ using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Utils;
 using Vagabond.Common.Data;
+using Vagabond.Common.Enums;
 using Vagabond.Common.Models;
 using Vagabond.Server.Config;
 using Vagabond.Server.Models;
@@ -195,6 +196,14 @@ public class VagabondRouter(
             var mapName = !string.IsNullOrWhiteSpace(payload.LocationId)
                 ? payload.LocationId
                 : VagabondService.GetCurrentRaidId(sessionId, state);
+
+            var raid = VagabondLocations.NormaliseMapName(mapName);
+            if (raid == RaidLocation.Nil || raid == RaidLocation.Labyrinth)
+            {
+                response.Success = false;
+                response.Message = "You cannot place your hideout on this map.";
+                return;
+            }
 
             if (state.HideoutState == null)
             {

@@ -275,6 +275,15 @@ public sealed class RaidEndPatch : AbstractPatch
             return;
         }
 
+        // this is used to hopefully just ignore this map and its extracts/transits to make it semi compatible..
+        // since labyrinth does not have any templates we can use, we handle labyrinth the same way.
+        if (string.Equals(locationName, "icebreaker", StringComparison.OrdinalIgnoreCase)
+            || locationMapE == RaidLocation.Labyrinth
+            || (isTransfer && VagabondLocations.NormaliseMapName(request.LocationTransit?.Location) == RaidLocation.Labyrinth))
+        {
+            return;
+        }
+
         state.TransitState = null;
         state.CurrentMap = locationMapStr;
         state.LastExit = GetExtractIdentifier(request.Results?.ExitName, locationMapE, locationName);

@@ -1,4 +1,4 @@
 {
-  "extracts": [],
-  "transits": []
+  "extracts": [], // all extracts sends you back where you came from
+  "transits": [] // no support for transits on labs.
 }
