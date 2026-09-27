@@ -27,13 +27,7 @@ public class BlockTraderMailClaimGetPatch : ModulePatch
             return true;
         }
 
-        var chatMessage = _messageField(__instance);
-        if (chatMessage == null || chatMessage.Type != EMessageType.NpcTraderMessage)
-        {
-            return true;
-        }
-
-        var traderId = chatMessage.Member?.Id;
+        var traderId = _messageField(__instance)?.Member?.Id;
         if (string.IsNullOrEmpty(traderId))
         {
             return true;
