@@ -10,11 +10,12 @@ Configs live in `SPT/user/mods/Vagabond/config/`. Restart the SPT server after e
 | [`exfils/<raid>.json`](EXFILS.md) | Custom extracts + transits per raid. |
 | [`static_transitions.json`](TRANSITIONS.md) | Landing spots for vanilla SPT transits. |
 | [`trader_locations.json`](TRADERS.md) | Which extract unlocks which trader. |
-| [Modder hotkeys](KEYBINDINGS.md) | Client-side `F8`/`F9`/`F10` dump hotkeys (BepInEx, not server JSON). |
+| `quests/<trader>.json`, `quests/hideout_relocation.json` | Join-hideout quests and the hideout relocation quest. |
+| [Hotkeys](KEYBINDINGS.md) | Client-side `CTRL+P` hideout placement and `F8`/`F9`/`F10` dump hotkeys (BepInEx, not server JSON). |
 
 ## Raid names
 
-`FactoryDay`, `FactoryNight`, `GroundZero`, `Streets`, `Woods`, `Customs`, `Interchange`, `Lighthouse`, `Reserve`, `Shoreline`, `Labs`, `Labyrinth`. Day/Night are separate raids.
+`FactoryDay`, `FactoryNight`, `GroundZero`, `Streets`, `Woods`, `Customs`, `Interchange`, `Lighthouse`, `Reserve`, `Shoreline`, `Labs`, `Labyrinth`. Day/Night are separate raids. Never use `Labyrinth` for `StartRaid` or `OnDeathGoToRaid`; see [Labyrinth](EXFILS.md#labyrinth).
 
 ---
 
@@ -40,6 +41,8 @@ Source: [Config.cs](../server/Config/Config.cs). Missing/invalid file → defaul
 | `OnDeathGoToRaid` | `""` | Required if `OnDeathGoTo="custom"`. |
 | `OnDeathGoToExfilIdentifier` | `""` | Required if `OnDeathGoTo="custom"`. |
 | `HealthOnDeath` | `0.0` | `1.0` = 100% limbs, `0.0` = game default. |
+| `EnergyOnDeath` | `0` | If above `0`, energy is set to this many points on death (not a percentage, capped at max). `0` = game default. |
+| `WaterOnDeath` | `0` | Same as `EnergyOnDeath`, for hydration. |
 | `HealStatusEffectsOnDeath` | `true` | Clear bleeds/fractures on death. |
 
 Custom respawn example:
@@ -54,12 +57,14 @@ Custom respawn example:
 | Field | Default | Notes |
 | --- | --- | --- |
 | `EnableFenceChanges` | `true` | Reshape Fence into a useful starter vendor. |
-| `DisableFlea` | `true` | Flea min level → 99. |
+| `FleaAccess` | `"disabled"` | `"disabled"` sets the flea market min level to 99. `"hideout"` and `"exfil"` are accepted but not implemented yet; any value other than `"disabled"` leaves the flea market at its vanilla level requirement. Replaces `DisableFlea`, which is no longer read. |
 | `DisableEvents` | `true` | Disable Halloween etc. |
 | `LimitTraderMailAccess` | `true` | Trader mail attachments only when their extract is reachable. |
 | `MailAttachmentLimit` | `"same-exit"` | Player-to-player mail: `"same-exit"`, `"same-map"`, `"anywhere"`. |
 | `AddFenceToHideout` | `false` | Fence always available from hideout. |
-| `JoinHideout<Trader>LoyaltyLevel` | `2` | Loyalty needed to start the join-hideout quest. One per trader: `Therapist`, `Jaeger`, `Mechanic`, `Peacekeeper`, `Prapor`, `Ragman`, `Skier`. |
+| `ignoredTraders` | BTR Driver, Lightkeeper, Storyteller, Survivor, Taran, Voevoda, Mr. Kerman, Radio station, Ref | Trader ids Vagabond never locks or unlocks; they keep their vanilla availability. Only remove Ref, and only if you enabled him and gave him an extract. |
+
+The loyalty level needed to start a trader's join-hideout quest (default `2`) is the `TraderLoyalty` condition in `quests/<trader>.json`, not a `vagabond.json` setting.
 
 ### Raid
 
@@ -76,10 +81,11 @@ Custom respawn example:
 
 | Field | Default | Notes |
 | --- | --- | --- |
-| `AllowHideoutRelocation` | `false` | `true` → place freely (CTRL+P). `false` → relocation requires `Fresh Foundations` quest from Skier. |
-| `HideoutRelocationFee` | `350000` | Roubles per relocation.                                                                           |
+| `AllowHideoutRelocation` | `false` | `true` → place freely (CTRL+P). `false` → relocation requires the repeatable `Clean Slate` quest from Skier. |
 | `ShareHideoutExits` | `false` | Other players' hideout exits also reach yours.                                                    |
-| `LimitHideoutAccessToHideoutExfil` | `false` | Hideout is only accessible when extracting at your hideout.                                       |
+| `LimitHideoutAccessToHideoutExfil` | `false` | Hideout is only accessible when extracting at your hideout. The shipped `vagabond.json` sets `true`. |
+
+The relocation fee (default 350000 roubles) is the `HandoverItem` condition in `quests/hideout_relocation.json`. Hideouts cannot be placed on Labyrinth or on maps Vagabond does not know, such as Icebreaker.
 
 ### Stash
 

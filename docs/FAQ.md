@@ -24,6 +24,7 @@ Short answers to the questions that come up most. For deeper detail, follow the 
 
 - [My custom extract is not appearing — why?](#my-custom-extract-is-not-appearing--why)
 - [Cost requirement says insufficient funds, but I have the money](#cost-requirement-says-insufficient-funds-but-i-have-the-money)
+- [I cannot place my hideout on this map](#i-cannot-place-my-hideout-on-this-map)
 
 ## Modders
 
@@ -39,12 +40,7 @@ Vagabond does **not** create traders. Install a separate trader mod (any standar
 
 Three paths, depending on which trader.
 
-- **Vanilla trader (Therapist, Jaeger, Mechanic, Peacekeeper, Prapor, Ragman, Skier).** The trader sends a join-hideout quest at `JoinHideout<Name>LoyaltyLevel` (default `2`). Complete it and they're available in your hideout.
-
-  ```jsonc
-  // vagabond.json
-  "JoinHideoutPraporLoyaltyLevel": 2
-  ```
+- **Vanilla trader (Therapist, Jaeger, Mechanic, Peacekeeper, Prapor, Ragman, Skier).** The trader offers a join-hideout quest once you reach loyalty level `2` with them. Complete it and they're available in your hideout. The quests live in `config/quests/<trader>.json`; the loyalty level is the `value` of the `TraderLoyalty` conditions under `AvailableForStart` and `AvailableForFinish`.
 
 - **Fence.** Special-cased — set `AddFenceToHideout: true` in `vagabond.json` and Fence is always reachable from any hideout.
 
@@ -88,7 +84,7 @@ Two files. Use F9 in raid to dump coords ([KEYBINDINGS.md](KEYBINDINGS.md)).
 ]
 ```
 
-Restart the SPT server. Reaching the extract unlocks that trader for the rest of the session. Multiple traders can share one `exfilIdentifier`. See [TRADERS.md](TRADERS.md), [EXFILS.md](EXFILS.md).
+Restart the SPT server. After you extract there, the trader is available for as long as that extract is your current location. Multiple traders can share one `exfilIdentifier`. See [TRADERS.md](TRADERS.md), [EXFILS.md](EXFILS.md).
 
 ## Add a transit
 
@@ -109,7 +105,7 @@ Add to the `transits` array in `config/exfils/<from-raid>.json`. Do **not** set 
 }
 ```
 
-`destinationLocation` is a **scene name**, not a raid enum: `bigmap` (Customs), `factory4_day`, `factory4_night`, `Sandbox_high` (Ground Zero), `Interchange`, `Lighthouse`, `RezervBase` (Reserve), `Shoreline`, `TarkovStreets`, `Woods`, `laboratory` (Labs), `labyrinth`.
+`destinationLocation` is a **scene name**, not a raid enum: `bigmap` (Customs), `factory4_day`, `factory4_night`, `Sandbox_high` (Ground Zero), `Interchange`, `Lighthouse`, `RezervBase` (Reserve), `Shoreline`, `TarkovStreets`, `Woods`, `laboratory` (Labs), `labyrinth`. A transit into `labyrinth` does not change your Vagabond location; see [Labyrinth](EXFILS.md#labyrinth).
 
 For two-way travel pair both ends with matching `connectedIdentifier`. Otherwise the destination spawn falls back to [`static_transitions.json`](TRANSITIONS.md).
 
@@ -120,7 +116,7 @@ Same `requirements` array works for extracts and transits.
 ```jsonc
 "requirements": [
   // player must carry 1x Red Rebel
-  { "type": "HasItem", "id": "5c012ffc0db834001d23f03f", "count": 1,
+  { "type": "HasItem", "id": "5c0126f40db834002a125382", "count": 1,
     "requirementTip": "Requires Red Rebel" },
   // headwear slot must be empty
   { "type": "EmptySlot", "requiredSlot": "Headwear",
@@ -235,7 +231,7 @@ Api.AddExfils(RaidLocation.Customs,
             new CustomExtractRequirementDefinition
             {
                 Type = CustomExfilRequirementType.HasItem,
-                Id   = "5d80c60f86f77440373c4ece", // Paracord
+                Id   = "5c12688486f77426843c7d32", // Paracord
                 Count = 1,
                 RequirementTip = "Requires Paracord"
             },
@@ -254,7 +250,7 @@ Api.AddExfils(RaidLocation.Customs,
 
 ## Change a player's Vagabond state
 
-Read, mutate, save. `GetState` returns `null` if Vagabond hasn't initialized state for the profile yet.
+Read, mutate, save. `GetState` is typed as nullable, but for a profile with no saved Vagabond state it currently returns a fresh default state. Keep the null check anyway.
 
 ```csharp
 var state = Api.GetState(sessionId);
@@ -272,11 +268,12 @@ Mutable fields on `VagabondSessionState`: `VagabondModeEnabled`, `IsNewCharacter
 
 ## My custom extract is not appearing — why?
 
-Check the server log for `No template exfil found for '<id>' on <raid>`. Three usual causes:
+Check the server log for `No template exfil found for '<id>' on <raid>`. Usual causes:
 
-1. **Reserve.** Every PMC extract on Reserve carries a `PassageRequirement`, so the default template picker rejects all of them. Either set an explicit `templateExitName` (e.g. `"Alpinist"`, `"EXFIL_Bunker_D2"` — note these inherit vanilla switch / quest gating) or skip extracts on Reserve and use transits only, like the shipped `reserve.json`.
-2. **Streets.** Many vanilla extracts are gated by chance / entry points. Pin `templateExitName` to a stable extract — the shipped Streets config uses `"Sewer River"` (the localized form of DB `Name: "E2"`).
-3. **Typo / wrong case.** `templateExitName` must match `Settings.Name` from `<SPT-server>/SPT_Data/database/locations/<scene>/allExtracts.json`. For Streets specifically, look up the localized form in `database/locales/global/<lang>.json`.
+1. **Reserve.** Every PMC extract on Reserve carries a `PassageRequirement`, so the default template picker rejects all of them. Either set `"templateExitName": "Alpinist"` (not `EXFIL_Bunker_D2`, which is tied to a switch; see [Reserve](EXFILS.md#reserve)) or skip extracts on Reserve and use transits only, like the shipped `reserve.json`.
+2. **Labs.** Every PMC extract on Labs fails the default template filter too. Set `"templateExitName": "lab_Vent"` on every Labs extract. See [Labs](EXFILS.md#labs).
+3. **Streets.** Many vanilla extracts are gated by chance / entry points. Pin `templateExitName` to a stable extract. The shipped Streets config uses `"E1"`.
+4. **Typo / wrong case.** `templateExitName` must match the `Name` in `<SPT-server>/SPT_Data/database/locations/<scene>/allExtracts.json`, on every map including Streets.
 
 Full guide: [EXFILS.md → Finding template exit names](EXFILS.md#finding-template-exit-names).
 
@@ -284,19 +281,25 @@ Full guide: [EXFILS.md → Finding template exit names](EXFILS.md#finding-templa
 
 The price must come out of a **single** currency stack with `StackObjectsCount >= price`. Three stacks of 100 000 do **not** satisfy a 250 000 cost — Vagabond mirrors vanilla v-ex behavior.
 
-Keep individual costs ≤ 500 000 (the rouble stack cap) so the player can pay from one stack. For higher prices, split the requirement across multiple `Cost` entries or use a different currency.
+Keep individual costs ≤ 1 000 000 roubles or ≤ 50 000 dollars/euros (the stack caps) so the player can pay from one stack. For higher prices, split the requirement across multiple `Cost` entries or use a different currency.
+
+---
+
+## I cannot place my hideout on this map
+
+Placement is refused with `You cannot place your hideout on this map.` on Labyrinth and on maps Vagabond does not know, such as Icebreaker. Place it on any other map.
 
 ---
 
 ## Mod load order and the IsVagabondEnabled guard
 
-Vagabond's loader registers the API at `OnLoadOrder.PreSptModLoader`. Calling `Vagabond.Common.Api.Api` before that phase finishes throws `InvalidOperationException` ("Vagabond is not initialised yet"). Recommended order: `OnLoadOrder.PostDBModLoader + 2`. Always guard against Vagabond being absent so your mod still loads on its own.
+Vagabond's loader registers the API at `OnLoadOrder.Preload`. Calling `Vagabond.Common.Api.Api` before that phase finishes throws `InvalidOperationException` ("Vagabond is not initialised yet"). The exfil calls also need the location database, which Vagabond hooks up at `OnLoadOrder.PostLoad + 1`. Recommended order: `OnLoadOrder.PostLoad + 2`. Always guard against Vagabond being absent so your mod still loads on its own.
 
 ```csharp
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 2)]
+[Injectable(TypePriority = OnLoadOrder.PostLoad + 2)]
 public sealed class MyLoader : IOnLoad
 {
-    public Task OnLoad()
+    public Task OnLoadAsync(CancellationToken cancellationToken)
     {
         if (!IsVagabondEnabled())
         {

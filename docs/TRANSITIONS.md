@@ -30,10 +30,10 @@ Array of entries:
 
 ```json
 [
-  { "from": "Streets",     "to": "Customs", "x": 230.016, "y": 16.187, "z": 83.303,  "rotation": 231.771 },
+  { "from": "Streets",     "to": "GroundZero", "x": 230.016, "y": 16.187, "z": 83.303,  "rotation": 231.771 },
   { "from": "FactoryDay",  "to": "Customs", "x": 353.939, "y": 1.123,  "z": -189.197,"rotation": 3.389 },
   { "from": "FactoryNight","to": "Customs", "x": 353.939, "y": 1.123,  "z": -189.197,"rotation": 3.389 }
 ]
 ```
 
-Entries with `from` or `to` set to `Nil` (or unrecognised) are skipped with a warning.
+Entries with `from` or `to` set to `Nil` (or unrecognised) are skipped and logged as config errors.

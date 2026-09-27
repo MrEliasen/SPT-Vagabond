@@ -10,12 +10,6 @@ You start with limited money to buy a simple loadout from Fence, with some meds 
 [![GitHub Issues or Pull Requests by label](https://img.shields.io/github/issues/MrEliasen/SPT-Vagabond/bug?style=for-the-badge&label=open%20Issues&color=red)
 ](https://github.com/MrEliasen/SPT-Vagabond/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug)
 
-#### Custom Trader Support
-Since 0.6.0 custom traders are no longer 'officially' added to vagabond. They are fully supported if you add them yourself via the config or the mod authors add an integration. But there will be no custom traders exfils added directly in vagabond. To add traders to existing exfils is quite easy [via the configs](docs/TRADERS.md)
-
-#### ABPS Compatibility
-0.7.0 was tested with ABPS 2.0.18, and a graceful failover is added if the patch could not be applied. ABPS is going through what looks like a rewrite so expect incompatibility.
-
 #### Using SVM?
 Disable the Raid Settings tab completely, it even being enabled is enough to cause conflicts, regardless of whether or not you changed anything within the tab. - Thank you [_liquidrage](https://forge.sp-tarkov.com/user/90917/liquidrage)!
 
@@ -23,7 +17,7 @@ Disable the Raid Settings tab completely, it even being enabled is enough to cau
 They should. If its a quest which requires specific extractions, those will be available only when you have the quest(s). Using such extraction will take you back to the quest giver. Do let me know if I missed any quests / if you find any quests you cannot complete.
 
 ## Main Features
-- Place your hideout entrance anywhere (Press CTRL+P in raid to place your hideout entrance, if you use Fika, other players can use your hideout exit as well)
+- Place your hideout entrance anywhere (Press CTRL+P twice in raid to place your hideout entrance, if you use Fika, other players can use your hideout exit as well)
 - Per-trader (and hideout if playing with friends) stash
 - Use trader specific extractions to get access to their shop.
 - Recruit traders into your hideout
@@ -35,12 +29,15 @@ They should. If its a quest which requires specific extractions, those will be a
 ## Compatibility
 
 Any mod which makes changes to Extractions, Transits or player spawning (Like selectable entry mod or interaction mods), will likely conflict with this mod and prevent extracts from working.
-Labyrinth has not been tested with this mod.. but.. should hopefully work.
+
+Labyrinth is partically supported. Transiting into it is not considered a locked location, so surviving a Labyrinth raid will put you are back where you came from. Custom transits cannot be added there. See [Labyrinth](docs/EXFILS.md#labyrinth).
+
+Icebreaker (Manimal's mod) is partially supported. Transiting into it is not considered a locked location, so surviving an Icebreaker raid will put you are back where you came from.
 
 ## Install
 
 1. Download the latest version
-2. Extract and copy the `SPT\user\mods\Vagabond` folder to `SPT\user\mods` and the `BepInEx\plugins\Vagabond` to `BepInEx\plugins`.
+2. Extract into your SPT game dir.
 3. If you use **Headless** clients, you will need to add the client plugin to the headless spt client as well.
 4. Create a new profile, and it will get enrolled as a new Vagabond.
 

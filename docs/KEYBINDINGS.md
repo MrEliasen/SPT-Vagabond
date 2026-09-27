@@ -4,7 +4,15 @@
 
 [← back to CONFIG](CONFIG.md)
 
-Client-side hotkeys for grabbing in-game coords while authoring custom exfils/transits in [`exfils/<raid>.json`](EXFILS.md) or [`static_transitions.json`](TRANSITIONS.md). Bound via BepInEx — only active in non-headless clients, only inside a raid.
+Client-side hotkeys for placing your hideout and for grabbing in-game coords while authoring custom exfils/transits in [`exfils/<raid>.json`](EXFILS.md) or [`static_transitions.json`](TRANSITIONS.md). Bound via BepInEx — only active in non-headless clients, only inside a raid.
+
+## Player hotkey
+
+| Default | Action |
+| --- | --- |
+| `CTRL+P` | Place your hideout entrance at your current position. |
+
+The first press arms placement; press again within 10 seconds to place. It is refused on Labyrinth and on maps Vagabond does not know, such as Icebreaker. See [Hideout](CONFIG.md#hideout) for relocation rules.
 
 ## Modder hotkeys
 
@@ -56,7 +64,7 @@ Plugin dir: `BepInEx/plugins/Vagabond/`. Files are append-only — clear them yo
 
 Two ways:
 
-- In-game: open BepInEx Configuration Manager (default `F12`, requires the ConfigurationManager plugin) → **Vagabond** → **For Modders**.
+- In-game: open BepInEx Configuration Manager (default `F12`, requires the ConfigurationManager plugin) → **Vagabond** → **For Players** or **For Modders**.
 - File: edit `BepInEx/config/dev.oogabooga.spt-vagabond.cfg`. Format is `KeyName + Modifier`:
 
 ```ini

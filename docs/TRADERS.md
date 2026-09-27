@@ -4,7 +4,7 @@
 
 [← back to CONFIG](CONFIG.md)
 
-`config/trader_locations.json` binds traders to extracts. Reaching the named extract on the named raid gives that trader's shop access.
+`config/trader_locations.json` binds traders to extracts. Reaching the named extract on the named raid gives that trader's shop access. Traders listed in `ignoredTraders` ([CONFIG](CONFIG.md#trader--economy)) are never locked or unlocked by Vagabond.
 
 Source: [TraderLocation.cs](../common/Definitions/TraderLocation.cs).
 
@@ -16,7 +16,7 @@ Array of entries:
 | --- | --- |
 | `traderId` | EFT trader id (mongo id). See [reference](#trader-ids). |
 | `raid` | [Raid name](CONFIG.md#raid-names). |
-| `exfilIdentifier` | `identifier` from `exfils/<raid>.json`. Must exist in that raid. |
+| `exfilIdentifier` | `identifier` of an entry in the `extracts` array of `exfils/<raid>.json`; transits do not count. Rows that do not match are dropped at startup and logged. |
 
 A trader can have multiple bindings (e.g. Fence on Streets + Lighthouse, Mechanic on FactoryDay + FactoryNight — Day/Night are separate raids).
 

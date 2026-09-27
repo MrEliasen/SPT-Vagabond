@@ -32,7 +32,7 @@ Source: [common/Definitions/CustomExfil.cs](../common/Definitions/CustomExfil.cs
 | `DestinationLocation` | `string` | EFT scene id of destination, e.g. `bigmap`. Use `VagabondLocations.RaidLocationToMapName(...)`. |
 | `AccessKeysSourceLocation` | `string` | Override which map's `AccessKeys` gate this transit. Empty = use `DestinationLocation` (vanilla). |
 | `Description` | `string` | Shown by transit interaction UI. |
-| `EntryPoints` | `string` | Comma-separated EFT entry point names. **Ignored on extracts** — the server overwrites with the map's PMC entry points before sync. Not used by transits. See [EXFILS.md](EXFILS.md#shared-fields). |
+| `EntryPoints` | `string` | Comma-separated EFT entry point names. No practical effect on extracts: the client always adds the player's own entry point, so every player can use the extract. Not used by transits. See [EXFILS.md](EXFILS.md#shared-fields). |
 | `Side` | `string` | `"Pmc"` (default), or as needed. |
 | `ExfiltrationTime` | `float` | Timer in seconds. Default `20f`. |
 | `ActivateAfterSeconds` | `int` | Default `0`. Delay before the exfil activates. |
@@ -107,7 +107,8 @@ Wire shapes used by Vagabond's internal routes. Listed for reference — mods no
 | --- | --- |
 | `GetExfilDataRequest` | `Version: int` |
 | `SyncExfilResponse` | `Version: int`, `CustomExfils: Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>?` |
-| `SyncStateResponse` | `ResetOnDeath, WipeFirstRaid, NewCharacter, AllowPostRaidHealing, LimitTraderMailAccess, LootStreakEnabled: bool`, `CurrentMap: string`, `QuestExfils: Dictionary<string, List<string>>`, `CustomExfils: Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>`, `RaidFirItems: HashSet<string>`, `LootStreakMultiplier: double` (default `1.0`), `LootStreakCount: int` |
+| `SyncStateRequest` | `InRaid: bool?` |
+| `SyncStateResponse` | `ResetOnDeath, WipeFirstRaid, VirtualStashes, NewCharacter, AllowPostRaidHealing, LimitTraderMailAccess, HideoutAccessible, LimitHideoutAccess, LootStreakEnabled: bool`, `CurrentMap: string`, `QuestExfils: Dictionary<string, List<string>>`, `CustomExfils: Dictionary<RaidLocation, Dictionary<string, List<CustomExfil>>>`, `RaidFirItems: HashSet<string>`, `LootStreakMultiplier: double` (default `1.0`), `LootStreakCount: int` |
 | `PlaceHideoutRequest` | `X, Y, Z, R: float`, `LocationId: string?` |
 | `PlaceHideoutResponse` | `Success: bool`, `Message: string`, `CurrentRaid: string?`, `MapName: string?` |
 | `ManualSpawnPoint` | `X, Y, Z, Rotation: double` |
@@ -145,16 +146,16 @@ Source: [common/Data/Currencies.cs](../common/Data/Currencies.cs)
 ### `ForcedSpawnPointIds`
 Source: [common/Data/ForcedSpawnPointIds.cs](../common/Data/ForcedSpawnPointIds.cs)
 
-`Prefix` constant, `IsForcedSpawnId(string?)`, `Build(locationName, templateId)`.
+`Prefix` constant, `IsForcedSpawnId(string?)`, `IsForcedSpawnIdForSession(spawnPointId, sessionId)`, `Build(locationName, templateId, sessionId)`.
 
 ### `ExfilQuests`
 Source: [common/Data/ExfilQuests.cs](../common/Data/ExfilQuests.cs)
 
-`Dictionary<questId, Dictionary<sceneName, List<exfilName>>>` — vanilla quest-gated exfils.
+`List`: `Dictionary<questId, Dictionary<sceneName, List<exfilName>>>`, the vanilla quest-gated exfils. `TraderQuests`: trader id to the quest ids that trader gives. `IsExfilQuest(exitName, questExfils, out traderId)`: whether an exit belongs to one of the quests in `questExfils`, and which trader gives that quest.
 
 ### Per-map exfil JSON
 
-Default exfils/transits ship as JSON under `server/Config/exfils/<raid>.json` (one per `RaidLocation`). Default trader/exfil bindings live in `server/Config/trader_locations.json`. End users can edit these without recompiling — see [CONFIG.md](CONFIG.md) for the full reference. Internally the loader feeds the same `Api.AddExfils` / `Api.AddTraderLocations` path third-party mods use, so 3rd-party mods see no behavior change.
+Default exfils/transits ship as JSON under `server/Config/exfils/<raid>.json` (one per `RaidLocation`). Default trader/exfil bindings live in `server/Config/trader_locations.json`. End users can edit these without recompiling — see [CONFIG.md](CONFIG.md) for the full reference. The JSON loader and the API write to the same exfil and trader-location stores, but the loader does not go through the `Api` methods.
 
 ### `Messages`
 Source: [common/Data/Messages.cs](../common/Data/Messages.cs)

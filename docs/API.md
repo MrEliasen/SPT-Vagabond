@@ -6,12 +6,12 @@ Static class: `Vagabond.Common.Api.Api` (in `Vagabond.Common.dll`).
 ## Setup
 
 1. Reference `Vagabond.Common.dll`.
-2. Make your mod load **after** Vagabond's `PreSptModLoader` phase, otherwise calls throw `InvalidOperationException`.
+2. Make your mod load **after** Vagabond's `OnLoadOrder.Preload` phase, otherwise calls throw `InvalidOperationException`. The exfil calls also need the location database, which Vagabond hooks up at `OnLoadOrder.PostLoad + 1`.
 3. Do **NOT** include a copy of the `Vagabond.Common.dll` with your mod.
 
 ```csharp
-// "+2" places your mod after Vagabond (which sits at +1)
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 2)]
+// "+2" places your mod after Vagabond's database loader (PostLoad + 1)
+[Injectable(TypePriority = OnLoadOrder.PostLoad + 2)]
 public sealed class MyModLoader : IOnLoad { ... }
 ```
 
@@ -98,7 +98,7 @@ For Fence specifically there is a global config switch (`AddFenceToHideout`) tha
 
 | Method | Description |
 | --- | --- |
-| `VagabondSessionState? GetState(string sessionId)` | Returns the profile's session state. `null` if profile has none or it's not yet available. |
+| `VagabondSessionState? GetState(string sessionId)` | Returns the profile's session state. Typed as nullable, but currently returns a fresh default state when the profile has none saved yet. |
 | `void SaveState(string sessionId, VagabondSessionState state)` | Persists the session state to disk. |
 
 ```csharp

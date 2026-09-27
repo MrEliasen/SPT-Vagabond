@@ -4,7 +4,7 @@
 
 [← back to CONFIG](CONFIG.md)
 
-Per-raid extracts and transits live in `config/exfils/<raid>.json`. One file per raid. Empty (`{"extracts":[],"transits":[]}`) is fine — `labs.json` and `labyrinth.json` ship empty by design.
+Per-raid extracts and transits live in `config/exfils/<raid>.json`. One file per raid. Empty (`{"extracts":[],"transits":[]}`) is fine. `labs.json` and `labyrinth.json` ship empty; read [Map-specific notes](#map-specific-notes) before adding to them.
 
 File names are case-insensitive; underscores optional: `factory_day.json` and `factorynight.json` both work.
 
@@ -28,15 +28,16 @@ Source: [CustomExfil.cs](../common/Definitions/CustomExfil.cs).
 | `exfiltrationTime` | `20` | Seconds. |
 | `x` / `y` / `z` | `0` | World position. Ignored when `hijackExfil=true`. |
 | `rotationY` | `0` | Facing angle when spawning here. |
-| `templateExitName` | `null` | Existing scene exfil name to clone trigger setup from. See [Finding template exit names](#finding-template-exit-names). When unset, Vagabond falls back to any vanilla extract that passes the template filter — that fallback fails on raids like Reserve where no vanilla extract qualifies (see [Map-specific notes](#map-specific-notes)). |
-| `entryPoints` | `""` | Comma-separated EFT entry-point names. **Ignored on extracts** — Vagabond always overwrites with the map's PMC entry points. Not used by transits. |
+| `templateExitName` | `null` | Extracts only. Existing scene exfil name to clone trigger setup from. See [Finding template exit names](#finding-template-exit-names). When unset, Vagabond falls back to any vanilla extract that passes the template filter. That fallback fails on raids where no vanilla extract qualifies, such as Reserve and Labs (see [Map-specific notes](#map-specific-notes)). Transits ignore this field and use `templateTransitId`. |
+| `entryPoints` | `""` | Comma-separated EFT entry-point names. No practical effect on extracts: the client always adds the player's own entry point, so every player can use the extract. Not used by transits. |
 | `hijackExfil` | `false` | See [Hijack](#hijack). |
 | `side` | `"Pmc"` | Usually leave alone. |
-| `activateAfterSeconds` | `0` | Delay before the exfil activates. |
-| `isActive` | `true` | |
-| `events` | `false` | |
+| `activateAfterSeconds` | `0` | Transit only. Delay before the transit activates. |
+| `isActive` | `true` | Transit only. |
+| `events` | `false` | Transit only. |
 | `hideIfNoKey` | `false` | Transit only — hide if access key absent. |
 | `accessKeysSourceLocation` | `""` | Override which map's `AccessKeys` gates the transit. Empty = use `destinationLocation`. |
+| `requirements` | `[]` | List of [requirements](#requirements). |
 
 ## Transit-only fields
 
@@ -45,8 +46,8 @@ Source: [CustomExfil.cs](../common/Definitions/CustomExfil.cs).
 | `destinationLocation` | EFT **scene name** (not raid enum). See [scene names](#scene-names). |
 | `description` | Text shown on the transit interaction prompt. |
 | `connectedIdentifier` | `identifier` of the matching exfil on the destination map. Drives spawn placement (see [Landing](#landing)). |
-| `templateTransitId` | Specific scene transit id to clone. If null, the first available is used. |
-| `requirements` | List of [requirements](#requirements). |
+| `templateTransitId` | Specific scene transit id to clone. If null, the first active scene transit is used. A raid with no scene transit at all cannot have custom transits. |
+| `transitPointId` | Runtime transit id. Leave it unset and the server assigns one. If you set it, it must not match another transit on that map, or the transit is skipped. |
 
 ### Scene names
 
@@ -75,23 +76,23 @@ For `Cost`, `id` is a currency template id. Supported values:
 Example (Red Rebel + Paracord required):
 ```json
 "requirements": [
-  { "type": "HasItem", "id": "5c012ffc0db834001d23f03f", "count": 1, "requirementTip": "Requires Red Rebel" },
-  { "type": "HasItem", "id": "5d80c60f86f77440373c4ece", "count": 1, "requirementTip": "Requires Paracord" }
+  { "type": "HasItem", "id": "5c0126f40db834002a125382", "count": 1, "requirementTip": "Requires Red Rebel" },
+  { "type": "HasItem", "id": "5c12688486f77426843c7d32", "count": 1, "requirementTip": "Requires Paracord" }
 ]
 ```
 
 Example (50 000 ₽ toll, no Charisma/Fence discount, with Red Rebel + Paracord):
 ```json
 "requirements": [
-  { "type": "HasItem", "id": "5c012ffc0db834001d23f03f", "count": 1, "requirementTip": "Requires Red Rebel" },
-  { "type": "HasItem", "id": "5d80c60f86f77440373c4ece", "count": 1, "requirementTip": "Requires Paracord" },
+  { "type": "HasItem", "id": "5c0126f40db834002a125382", "count": 1, "requirementTip": "Requires Red Rebel" },
+  { "type": "HasItem", "id": "5c12688486f77426843c7d32", "count": 1, "requirementTip": "Requires Paracord" },
   { "type": "Cost", "count": 50000, "requirementTip": "Toll" }
 ]
 ```
 
 ### Cost notes
 
-- **Single-stack limit (extracts and transits).** The player must hold a single stack of the currency whose `StackObjectsCount >= price`. Money split across stacks won't satisfy the requirement even if the total is enough — match the vanilla v-ex behavior. Keep extract/transit costs ≤ 500 000 ₽ (the rouble stack cap) and players can pay from a single stack.
+- **Single-stack limit (extracts and transits).** The player must hold a single stack of the currency whose `StackObjectsCount >= price`. Money split across stacks won't satisfy the requirement even if the total is enough — match the vanilla v-ex behavior. Keep extract/transit costs ≤ 1 000 000 ₽ or ≤ 50 000 $/€ (the stack caps) and players can pay from a single stack.
 - **`applyDiscount` (default `false`) — transit-only.** When true on a transit, the configured `count` is run through `Profile.GetExfiltrationPrice` so Charisma / Fence loyalty / Mark of Unknown discounts apply (5–25% off depending on stats). When false, transits charge the flat configured value.
 - **Extracts always discount.** EFT's vanilla v-ex pipeline runs the price through the discount formula before showing the prompt. The `applyDiscount` flag is ignored on extracts; the discounted price is what the player sees in `EXFIL_Transfer (NNNN)` and pays. If you need a flat extract price, increase `count` to compensate for the worst-case discount.
 - **Where the money comes from.** Same as vanilla v-ex: any currency stack visible to `Profile.Inventory.GetAllItemByTemplate` — equipment, pockets, secured container, etc.
@@ -145,9 +146,8 @@ Pair both directions to get clean two-way travel:
 
 `templateExitName` matches the runtime `ExfiltrationPoint.Settings.Name` of an existing scene exfil (case-insensitive). The level designer sets it in the Unity scene, so the source of truth is the scene itself, but you can read the strings off two places without launching the game:
 
-1. **`<SPT-server>/SPT_Data/database/locations/<scene>/allExtracts.json`** — the `Name` field per entry. For most maps this is the literal string the scene uses verbatim (e.g. Reserve `"EXFIL_Bunker_D2"`, Customs `"EXFIL_ZB-013"`, Factory `"factory4_gate0"`).
-2. **`<SPT-server>/SPT_Data/database/locales/global/<lang>.json`** — for maps where the scene uses a localized display string instead of the DB key. **Streets** is the canonical case: DB `Name: "E2"` becomes `"Sewer River"` at runtime, and that's the string `templateExitName` must contain. Look up the DB `Name` as a key in the locale file.
-3. **Vagabond's own log** — at raid start Vagabond logs `Added custom extract '<displayName>' (identifier '<id>') using template '<X>'.`. `<X>` is the live `Settings.Name` it resolved. Copy it back into your config to pin the choice deliberately.
+1. **`<SPT-server>/SPT_Data/database/locations/<scene>/allExtracts.json`**: the `Name` field per entry. The scene uses this exact string on every map, Streets included; the game pairs scene exits with database exits by exact name (e.g. Reserve `"EXFIL_Bunker_D2"`, Customs `"EXFIL_ZB-013"`, Factory `"factory4_gate0"`, Streets `"E1"`).
+2. **Vagabond's own log** — at raid start Vagabond logs `Added custom extract '<displayName>' (identifier '<id>') using template '<X>'.`. `<X>` is the live `Settings.Name` it resolved. Copy it back into your config to pin the choice deliberately.
 
 Raid file → DB folder mapping (the `<scene>` directory you should look in):
 
@@ -184,35 +184,49 @@ Raid file → DB folder mapping (the `<scene>` directory you should look in):
 ```json
 {
   "extracts": [{
-    "identifier": "VGB_EXT_FENCE",
-    "displayName": "Fence's Hub",
+    "identifier": "VGB_EXT_MYTRADER",
+    "displayName": "My Trader's Spot",
     "x": 74.785, "y": -2.046, "z": 49.224, "rotationY": 15.011,
     "exfiltrationTime": 20
   }]
 }
 ```
 
-Bind it to a trader in [TRADERS.md](TRADERS.md).
+The coordinates are a spot on Streets; dump your own with `F9` ([KEYBINDINGS.md](KEYBINDINGS.md)). Bind it to a trader in [TRADERS.md](TRADERS.md).
 
 ## Map-specific notes
 
-Two raids need extra care.
+Four raids need extra care.
 
 ### Streets
 
-Vanilla Streets ships many small, conditional PMC extracts: low `Chance`, segmented `EntryPoints` (`E1_2,E2_3,…`), trigger requirements. The default template picker (used when `templateExitName` is unset) walks past anything that fails the filter — and it fails inconsistently across spawns, since `EligibleEntryPoints` are checked against the player's current entry. Letting the fallback choose gives unstable results across raids.
+Vanilla Streets ships many small, conditional PMC extracts: low `Chance`, segmented `EntryPoints` (`E1_2,E2_3,…`), trigger requirements. The default template picker (used when `templateExitName` is unset) skips anything that fails the filter and takes the first vanilla extract left. The player's spawn point does not affect the pick, but you do not choose which extract it lands on, and the clone inherits that extract's trigger height.
 
-Recommendation: **always set `templateExitName` explicitly on Streets** to a stable always-present extract. The shipped configs pin `"Sewer River"` (= DB `Name: "E2"`) for both Prapor and Fence — see [streets.json](../server/Config/exfils/streets.json).
-
-Streets specifically uses the **localized display string** as the scene's `Settings.Name`, not the DB `Name`. So look up your candidate in `database/locales/global/<lang>.json` keyed by the DB `Name` and use that localized form in the config.
+Recommendation: **always set `templateExitName` explicitly on Streets** to a stable always-present extract. The shipped configs pin `"E1"` for both Prapor and Fence; see [streets.json](../server/Config/exfils/streets.json).
 
 ### Reserve
 
-Every PMC extract in [`rezervbase/allExtracts.json`](../soft-dependency-sources/database/locations/rezervbase/allExtracts.json) carries a `PassageRequirement` (`Train`, `WorldEvent`, `Reference`, `ScavCooperation`). At runtime each becomes a non-empty `Requirements` array, which the default template filter rejects. **No vanilla Reserve extract passes the default filter** — so any custom extract on Reserve without an explicit `templateExitName` will log `No template exfil found ... on Reserve.` and be skipped.
+Every PMC extract in `<SPT-server>/SPT_Data/database/locations/rezervbase/allExtracts.json` carries a `PassageRequirement` (`Train`, `WorldEvent`, `Reference`, `ScavCooperation`, `Empty`). At runtime each becomes a non-empty `Requirements` array, which the default template filter rejects. **No vanilla Reserve extract passes the default filter** — so any custom extract on Reserve without an explicit `templateExitName` will log `No template exfil found ... on Reserve.` and be skipped.
 
 Two ways forward on Reserve:
 - Don't ship custom extracts there. The shipped [reserve.json](../server/Config/exfils/reserve.json) does this, exposing only a Red-Rebel + Paracord transit.
-- If you must, set `templateExitName` to one of the gated PMC exits (e.g. `"Alpinist"`, `"EXFIL_Bunker_D2"`). You're cloning a point with vanilla requirements baked in — verify behavior.
+- If you must, set `templateExitName` to `"Alpinist"`. The clone does not keep the template's vanilla requirements, `Chance` or time window; Vagabond rebuilds them from your definition. Avoid exits tied to a switch (button, lever, power), such as `EXFIL_Bunker_D2` and `EXFIL_Bunker`: the clone stays subscribed to it and throws a null reference error when it changes state.
+
+### Labs
+
+Every PMC extract in the Labs `allExtracts.json` fails the default template filter: the three elevators are `Manual`, Parking Gate and Hangar Gate have a `Chance` of 60, Collector needs a world event, and Vent needs an empty backpack slot. Without `templateExitName`, every custom extract on Labs logs `No template exfil found ... on Labs.` and is skipped.
+
+Set `"templateExitName": "lab_Vent"` on every Labs extract. It is the only Labs exit not tied to a switch; the others hang off elevator buttons or consoles. The clone does not keep its backpack requirement. Hideout extracts on Labs reuse the first configured extract's `templateExitName`, so they work once your first extract has it.
+
+Transits need nothing extra. Labs has one scene transit (`Road_to_streets`, id `8`), and custom transits clone it automatically. To pin it anyway, set `"templateTransitId": 8`.
+
+### Labyrinth
+
+Vagabond does not record Labyrinth as your location. Transiting into Labyrinth and surviving a Labyrinth raid both leave your Vagabond location unchanged, so afterwards you are on the map you transited in from and spawn where you spawned for that raid. Dying there follows `OnDeathGoTo` as usual; with `stay` you also end up on the map you came from.
+
+- **Extracts:** the only vanilla exit, `labir_exit`, is a shared-timer exit that the default template filter rejects. Set `"templateExitName": "labir_exit"` on every Labyrinth extract. Because the extract is not recorded, it only ends the raid: binding a trader to a Labyrinth extract gives no trader access.
+- **Transits:** not possible. The Labyrinth scene has no transit points to clone, so custom transits log `No TransitPoint template exists in the Labyrinth scene ...` and are skipped. The four transits in the Labyrinth DB entry are copies of the Woods ones with no scene object behind them.
+- **Never make Labyrinth a destination.** Labyrinth is `Enabled: false` in the database and Vagabond only ever disables maps, so a player whose location becomes Labyrinth has no map to pick. Do not set `StartRaid` or `OnDeathGoToRaid` to Labyrinth. Hideouts cannot be placed on Labyrinth; the placement hotkey shows an error there.
 
 ## Rules of thumb
 
@@ -230,6 +244,13 @@ Logged by Vagabond when an extract definition can't resolve a usable scene exfil
 
 Causes:
 
-1. **`templateExitName` is set but doesn't match any scene exfil.** Typo, wrong case, or wrong map. Cross-check against `<SPT-server>/SPT_Data/database/locations/<scene>/allExtracts.json` (`Name` field) — and for Streets, the localized form in `database/locales/global/<lang>.json`.
-2. **`templateExitName` is unset and no vanilla extract on this raid passes the default filter.** Reserve is the canonical case (every PMC extract has a `PassageRequirement`). Set an explicit `templateExitName`. See [Reserve](#reserve).
-3. **`templateExitName` is unset and the default picker dropped through on a raid with conditional/segmented PMC extracts** (Streets — low `Chance`, gated `EntryPoints`). Pin `templateExitName` to a stable exit. See [Streets](#streets).
+1. **`templateExitName` is set but doesn't match any scene exfil.** Typo, wrong case, or wrong map. Cross-check against `<SPT-server>/SPT_Data/database/locations/<scene>/allExtracts.json` (`Name` field).
+2. **`templateExitName` is unset and no vanilla extract on this raid passes the default filter.** Reserve and Labs are the known cases: every PMC extract there has a requirement or another condition the filter rejects. Set an explicit `templateExitName`. See [Reserve](#reserve) and [Labs](#labs).
+
+### `No TransitPoint template exists in the <raid> scene after 60 frames; custom transit points will not be placed this raid.`
+
+Logged when the raid's scene has no active transit point for custom transits to clone. Every custom transit on that raid is skipped. `templateTransitId` cannot fix this, because it can only pick a transit point that exists in the scene. Labyrinth is the known case: its scene has no transit points.
+
+### `No exfiltration points exist on <raid> after 60 frames; custom extracts cannot be placed this raid.`
+
+Logged when the raid still has no exfil points after 60 frames, so there is nothing to clone. Every custom extract on that raid is skipped.
