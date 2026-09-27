@@ -1,4 +1,4 @@
 {
-  "extracts": [],
-  "transits": []
+  "extracts": [], // user "templateExitName": "lab_Vent" for extracts (do not hijack it)
+  "transits": [] // transits should.. work as long as you dont specify "templateExitName"
 }
