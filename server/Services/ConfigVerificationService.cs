@@ -68,9 +68,7 @@ internal static class ConfigVerificationService
                 continue;
             }
 
-            if (!ExfilsConfig.Maps.TryGetValue(row.Raid, out var entry) ||
-                !entry.Extracts.Exists(x =>
-                    string.Equals(x.Identifier, row.ExfilIdentifier, StringComparison.OrdinalIgnoreCase)))
+            if (!IsKnownExtract(row.Raid, row.ExfilIdentifier))
             {
                 ReportDroppedItem("trader_locations.json", subject,
                     $"exfilIdentifier '{row.ExfilIdentifier}' is not defined in the {row.Raid} exfil config.");
@@ -84,6 +82,18 @@ internal static class ConfigVerificationService
         {
             HideoutService.LoadTraderLocations(kept);
         }
+    }
+
+    private static bool IsKnownExtract(RaidLocation raid, string identifier)
+    {
+        if (ExfilsConfig.Maps.TryGetValue(raid, out var entry) &&
+            entry.Extracts.Exists(x => string.Equals(x.Identifier, identifier, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return ExfilService.GetCustomExfils(raid)
+            .Any(x => !x.IsTransit && string.Equals(x.Identifier, identifier, StringComparison.OrdinalIgnoreCase));
     }
 
     private static void VerifyStartLocation()
