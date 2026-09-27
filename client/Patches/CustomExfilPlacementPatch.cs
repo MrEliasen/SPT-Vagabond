@@ -293,8 +293,6 @@ internal class CustomExfilPlacementPatch : ModulePatch
         }
         // cache miss
 
-        var currentEntry = Singleton<GameWorld>.Instance?.MainPlayer?.Profile?.Info?.EntryPoint;
-
         bool MatchesExplicitTemplate(ExfiltrationPoint x) =>
             string.Equals(x.Settings?.Name, definition.TemplateExitName, StringComparison.OrdinalIgnoreCase);
 
@@ -358,20 +356,6 @@ internal class CustomExfilPlacementPatch : ModulePatch
             if (requireActiveStatus && x.Status == EExfiltrationStatus.NotPresent)
             {
                 return false;
-            }
-
-            if (!string.IsNullOrWhiteSpace(currentEntry))
-            {
-                if (x.EligibleEntryPoints == null || x.EligibleEntryPoints.Length == 0)
-                {
-                    return false;
-                }
-
-                if (!x.EligibleEntryPoints.Any(ep =>
-                        string.Equals(ep, currentEntry, StringComparison.OrdinalIgnoreCase)))
-                {
-                    return false;
-                }
             }
 
             return true;
