@@ -815,6 +815,39 @@ internal static class VirtualStashService
         internal volatile bool Released;
     }
 
+    /// <summary>
+    /// Ids of every item stored in this profile's persisted virtual stashes (all trader stashes and the temp stash).
+    /// These items are not in pmcData.Inventory.Items while no overlay is open.
+    /// </summary>
+    internal static HashSet<MongoId> GetAllVirtualStashItemIds(MongoId sessionId)
+    {
+        var ids = new HashSet<MongoId>();
+        if (!VagabondConfig.Config.EnableVirtualStashes)
+        {
+            return ids;
+        }
+
+        var profileDataService = ReflectionUtil.GetService<ProfileDataService>();
+        if (profileDataService == null)
+        {
+            return ids;
+        }
+
+        foreach (var stashKey in HideoutService.GetStashKeys().Append(TempStashKey))
+        {
+            var data = profileDataService
+                .GetProfileDataAsync<VirtualStashData>(sessionId, GetProfileStashKey(stashKey))
+                .GetAwaiter().GetResult();
+
+            foreach (var item in data?.Items ?? [])
+            {
+                ids.Add(item.Id);
+            }
+        }
+
+        return ids;
+    }
+
     internal static void RekeyStash(MongoId sessionId, string oldStashKey, string newStashKey)
     {
         if (string.IsNullOrWhiteSpace(oldStashKey) || string.IsNullOrWhiteSpace(newStashKey))

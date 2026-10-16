@@ -1,11 +1,14 @@
 using System.Reflection;
 using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.Callbacks;
+using SPTarkov.Server.Core.Controllers;
 using SPTarkov.Server.Core.Helpers.Commerce;
 using SPTarkov.Server.Core.Helpers.Profile;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common;
+using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Services.Commerce;
+using SPTarkov.Server.Core.Services.Profile;
 using Vagabond.Server.Services;
 
 namespace Vagabond.Server.Patches;
@@ -196,6 +199,66 @@ public sealed class InventoryHelperAddItemToStashPatch : AbstractPatch
     {
         __state?.Dispose();
         return __exception;
+    }
+}
+
+public sealed class InsuranceControllerCostPatch : AbstractPatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return typeof(InsuranceController).GetMethod(nameof(InsuranceController.Cost))!;
+    }
+
+    [PatchPrefix]
+    public static void Prefix(MongoId sessionId, out IDisposable __state)
+    {
+        __state = VirtualStashService.OpenStash(sessionId);
+    }
+
+    [PatchFinalizer]
+    public static Exception? Finalizer(Exception? __exception, IDisposable? __state)
+    {
+        __state?.Dispose();
+        return __exception;
+    }
+}
+
+/// <summary>
+/// On game start SPT's FixOrphanedInsurance drops every InsuredItems entry whose item is not in
+/// pmcData.Inventory.Items. Items sitting in a virtual stash are never there outside an overlay,
+/// so their insurance was silently removed on every launch. Put those entries back.
+/// </summary>
+public sealed class ProfileFixerFixOrphanedInsurancePatch : AbstractPatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return typeof(ProfileFixerService).GetMethod("FixOrphanedInsurance",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
+    }
+
+    [PatchPrefix]
+    public static void Prefix(PmcData pmcProfile, out List<InsuredItem>? __state)
+    {
+        __state = pmcProfile.InsuredItems?.ToList();
+    }
+
+    [PatchPostfix]
+    public static void Postfix(PmcData pmcProfile, List<InsuredItem>? __state)
+    {
+        if (__state == null || pmcProfile.InsuredItems == null || pmcProfile.SessionId is not { } sessionId)
+        {
+            return;
+        }
+
+        var dropped = __state.Where(insured => !pmcProfile.InsuredItems.Contains(insured)).ToList();
+        if (dropped.Count == 0)
+        {
+            return;
+        }
+
+        var virtualItemIds = VirtualStashService.GetAllVirtualStashItemIds(sessionId);
+        pmcProfile.InsuredItems.AddRange(dropped.Where(insured =>
+            insured.ItemId is { } itemId && virtualItemIds.Contains(itemId)));
     }
 }
 
